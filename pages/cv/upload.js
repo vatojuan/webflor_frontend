@@ -45,7 +45,11 @@ export default function UploadCVPage() {
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
-      setMessage(res.data.message || "CV procesado exitosamente.");
+      // Se concatena el mensaje de éxito con la recomendación de revisar spam
+      setMessage(
+        (res.data.message || "CV procesado exitosamente.") +
+          " Te recomendamos revisar tu bandeja de correo no deseado o spam."
+      );
       if (res.data.extracted_text) {
         setExtractedText(res.data.extracted_text);
       }
@@ -55,10 +59,14 @@ export default function UploadCVPage() {
       setSnackbar({
         open: true,
         severity: "success",
-        message: "CV procesado correctamente.",
+        message:
+          "CV procesado correctamente. Revisa tu bandeja de correo no deseado o spam.",
       });
     } catch (error) {
-      console.error("Error subiendo el CV:", error.response?.data || error.message);
+      console.error(
+        "Error subiendo el CV:",
+        error.response?.data || error.message
+      );
       setMessage("Error subiendo el CV.");
       setSnackbar({
         open: true,
