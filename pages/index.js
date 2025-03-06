@@ -34,3 +34,4 @@ app.listen(PORT, () => {
   console.log(`Servidor Express corriendo en http://localhost:${PORT}`);
   console.log(`Redirigiendo API a: ${API_URL}`);
 });
+//pequeño cambio para commit
