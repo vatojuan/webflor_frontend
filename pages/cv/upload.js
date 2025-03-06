@@ -1,4 +1,3 @@
-// pages/cv/upload.js
 import { useState } from "react";
 import axios from "axios";
 import Head from "next/head";
@@ -12,6 +11,7 @@ import {
   Alert,
   Snackbar,
   CssBaseline,
+  LinearProgress,
 } from "@mui/material";
 
 export default function UploadCVPage() {
@@ -27,18 +27,14 @@ export default function UploadCVPage() {
     message: "",
   });
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!file) {
+  // Función que realiza la subida del archivo
+  const uploadFile = async (selectedFile) => {
+    if (!selectedFile) {
       setMessage("Por favor selecciona un archivo.");
       return;
     }
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", selectedFile);
     if (email) formData.append("email", email.toLowerCase());
 
     setUploading(true);
@@ -74,6 +70,15 @@ export default function UploadCVPage() {
     }
   };
 
+  // Al seleccionar un archivo, se guarda y se sube automáticamente
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+    if (selectedFile) {
+      uploadFile(selectedFile);
+    }
+  };
+
   return (
     <>
       <Head>
@@ -86,11 +91,7 @@ export default function UploadCVPage() {
           <Typography variant="h4" align="center" gutterBottom>
             Subir tu CV
           </Typography>
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-          >
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Button variant="contained" component="label">
               Seleccionar Archivo (PDF o DOCX)
               <input
@@ -108,9 +109,7 @@ export default function UploadCVPage() {
               placeholder="ejemplo@correo.com"
               fullWidth
             />
-            <Button type="submit" variant="contained" color="primary" disabled={uploading}>
-              {uploading ? "Subiendo..." : "Subir CV"}
-            </Button>
+            {uploading && <LinearProgress sx={{ mt: 2 }} />}
           </Box>
           {message && (
             <Alert
