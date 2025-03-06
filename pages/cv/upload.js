@@ -108,6 +108,7 @@ export default function UploadCVPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ejemplo@correo.com"
               fullWidth
+              helperText="Si el CV contiene más de un email o deseas vincular tu CV a otro correo, especifica el email aquí."
             />
             {uploading && <LinearProgress sx={{ mt: 2 }} />}
           </Box>
