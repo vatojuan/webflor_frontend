@@ -14,7 +14,7 @@ export default function AdminDashboard() {
     if (!token) return; // Debería redirigir gracias al hook
 
     // Realiza una petición a un endpoint protegido del backend
-    fetch("https://api.fapmendoza.com/admin/protected", {
+    fetch("https://api.fapmendoza.online/admin/protected", {
       headers: {
         "Authorization": `Bearer ${token}`,
       },

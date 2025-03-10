@@ -12,7 +12,7 @@ export default function AdminLogin() {
     e.preventDefault();
     setError("");
     try {
-      const res = await fetch("https://tu-backend-dominio.com/auth/admin-login", {
+      const res = await fetch("https://api.fapmendoza.online/auth/admin-login", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
