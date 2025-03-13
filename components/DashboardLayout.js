@@ -1,5 +1,4 @@
-// /frontend/components/DashboardLayout.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTheme, styled } from "@mui/material/styles";
 import {
   AppBar,
@@ -92,7 +91,21 @@ const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
 export default function DashboardLayout({ children, toggleDarkMode, currentMode }) {
   const theme = useTheme();
   const router = useRouter();
-  const [open, setOpen] = useState(true);
+  // Inicializa el estado leyendo localStorage; si no hay, se abre por defecto.
+  const [open, setOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("sidebarOpen");
+      return stored !== null ? JSON.parse(stored) : true;
+    }
+    return true;
+  });
+
+  // Actualiza localStorage cada vez que cambia el estado
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sidebarOpen", JSON.stringify(open));
+    }
+  }, [open]);
 
   const handleDrawerToggle = () => {
     setOpen((prev) => !prev);
@@ -101,7 +114,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
   const drawerBg = theme.palette.mode === "dark" ? "#4E342E" : theme.palette.primary.main;
   const appBarBg = theme.palette.mode === "dark" ? "#3E2723" : theme.palette.primary.dark;
 
-  // Items del menú según lo solicitado
+  // Items del menú
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, href: "/admin/dashboard" },
     { text: "Editar BD", icon: <EditIcon />, href: "/admin/editar_db" },
