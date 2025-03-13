@@ -1,23 +1,26 @@
 import React, { useState } from "react";
-import useAdminAuth from "../../hooks/useAdminAuth"; // Asegúrate de la ruta correcta
+import useAdminAuth from "../../hooks/useAdminAuth";
 import {
   Container,
   Paper,
   Box,
   Typography,
   Button,
-  Alert,
   Snackbar,
   CssBaseline,
   LinearProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Card,
+  CardHeader,
+  CardContent,
+  IconButton,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  Divider
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
+import DeleteIcon from "@mui/icons-material/Delete";
 import axios from "axios";
 import Head from "next/head";
 
@@ -35,6 +38,10 @@ export default function AdminAgregarCV() {
 
   const handleFilesChange = (e) => {
     setFiles(e.target.files);
+  };
+
+  const clearResults = () => {
+    setResults([]);
   };
 
   const uploadFiles = async () => {
@@ -63,9 +70,9 @@ export default function AdminAgregarCV() {
         severity: "success",
         message: "CVs procesados correctamente."
       });
-      // Auto-limpia los logs después de 60 segundos
+      // Se puede limpiar automáticamente luego de 60 segundos o usar el botón de limpiar
       setTimeout(() => {
-        setResults([]);
+        clearResults();
       }, 60000);
     } catch (error) {
       console.error("Error en la carga de CVs", error);
@@ -90,7 +97,14 @@ export default function AdminAgregarCV() {
           <Typography variant="h4" align="center" gutterBottom>
             Agregar CVs
           </Typography>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              mb: 2
+            }}
+          >
             <Button variant="contained" component="label">
               Seleccionar CVs (PDF)
               <input
@@ -101,7 +115,12 @@ export default function AdminAgregarCV() {
                 onChange={handleFilesChange}
               />
             </Button>
-            {uploading && <LinearProgress />}
+            {uploading && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <LinearProgress sx={{ flex: 1 }} />
+                <Typography variant="body2">Procesando archivos...</Typography>
+              </Box>
+            )}
             <Button
               variant="contained"
               color="primary"
@@ -113,19 +132,33 @@ export default function AdminAgregarCV() {
           </Box>
           {results.length > 0 && (
             <Box sx={{ mt: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Resultados:
-              </Typography>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                <Typography variant="h6">Resultados del proceso</Typography>
+                <IconButton onClick={clearResults} title="Limpiar logs">
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
               {results.map((result, index) => (
-                <Accordion key={index}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>
-                      {result.file}: {result.message}{" "}
-                      {result.email ? `(Email: ${result.email})` : ""}
+                <Card key={index} sx={{ mb: 2 }}>
+                  <CardHeader
+                    avatar={
+                      result.status === "success" ? (
+                        <CheckCircleIcon color="success" />
+                      ) : (
+                        <ErrorIcon color="error" />
+                      )
+                    }
+                    title={`${result.file} ${
+                      result.email ? `(Email: ${result.email})` : ""
+                    }`}
+                    subheader={result.message}
+                  />
+                  <Divider />
+                  <CardContent>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Logs del proceso:
                     </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <List>
+                    <List dense>
                       {result.logs &&
                         result.logs.map((log, i) => (
                           <ListItem key={i}>
@@ -133,8 +166,8 @@ export default function AdminAgregarCV() {
                           </ListItem>
                         ))}
                     </List>
-                  </AccordionDetails>
-                </Accordion>
+                  </CardContent>
+                </Card>
               ))}
             </Box>
           )}
@@ -145,14 +178,16 @@ export default function AdminAgregarCV() {
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
-          <Alert
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
-            severity={snackbar.severity}
-            variant="filled"
-            sx={{ width: "100%" }}
-          >
-            {snackbar.message}
-          </Alert>
+          <Box>
+            <Alert
+              onClose={() => setSnackbar({ ...snackbar, open: false })}
+              severity={snackbar.severity}
+              variant="filled"
+              sx={{ width: "100%" }}
+            >
+              {snackbar.message}
+            </Alert>
+          </Box>
         </Snackbar>
       </Container>
     </>
