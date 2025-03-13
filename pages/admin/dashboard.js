@@ -4,7 +4,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ toggleDarkMode, currentMode }) {
   // Validar autenticación de administrador
   useAdminAuth();
 
@@ -40,19 +40,19 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <DashboardLayout>
-      <Box sx={{ mb: 2 }}>
+    <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
+      <Box sx={{ mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           Dashboard Administrativo
         </Typography>
-        <Typography variant="subtitle1">
+        <Typography variant="subtitle1" color="textSecondary">
           Ruta protegida para administradores, bienvenido support@fapmendoza.com
         </Typography>
       </Box>
-      <Grid container spacing={2}>
+      <Grid container spacing={3}>
         {/* Tarjeta de datos de la base de datos */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card elevation={3}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Datos de la Base de Datos
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
         </Grid>
         {/* Tarjeta de matchings en proceso */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card elevation={3}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Matchings en Proceso

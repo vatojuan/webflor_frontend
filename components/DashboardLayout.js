@@ -1,3 +1,4 @@
+// /frontend/components/DashboardLayout.js
 import React, { useState } from "react";
 import { useTheme, styled } from "@mui/material/styles";
 import { AppBar, Toolbar, Box, Divider, IconButton, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
@@ -130,11 +131,26 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
             const isActive = router.pathname === item.href;
             return (
               <Link href={item.href} key={item.text} passHref>
-                <ListItem button selected={isActive} sx={{ "&.Mui-selected": { backgroundColor: theme.palette.action.selected } }}>
-                  <ListItemIcon sx={{ color: "#fff", minWidth: 0, mr: open ? 2 : "auto", justifyContent: "center" }}>
+                <ListItem
+                  button
+                  selected={isActive}
+                  sx={{
+                    "&.Mui-selected": { backgroundColor: theme.palette.action.selected },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: "#fff",
+                      minWidth: 0,
+                      mr: open ? 2 : "auto",
+                      justifyContent: "center",
+                    }}
+                  >
                     {item.icon}
                   </ListItemIcon>
-                  {open && <ListItemText primary={item.text} />}
+                  {open && (
+                    <ListItemText primary={item.text} primaryTypographyProps={{ color: "#fff" }} />
+                  )}
                 </ListItem>
               </Link>
             );
@@ -168,9 +184,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
             </IconButton>
           </Toolbar>
         </AppBar>
-        <Box sx={{ p: 3, flexGrow: 1 }}>
-          {children}
-        </Box>
+        <Box sx={{ p: 3, flexGrow: 1 }}>{children}</Box>
       </Main>
     </Box>
   );
