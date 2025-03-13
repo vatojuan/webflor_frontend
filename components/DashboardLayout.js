@@ -14,7 +14,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import MuiDrawer from "@mui/material/Drawer";
-import Footer from "./Footer"; // Asegúrate de tener un Footer o elimina esta línea
 
 const drawerWidth = 260;
 const collapsedWidth = 72;
@@ -157,7 +156,6 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
           </Toolbar>
         </AppBar>
         <Box sx={{ p: 3, flexGrow: 1 }}>{children}</Box>
-        <Footer />
       </Main>
     </Box>
   );
