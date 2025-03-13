@@ -141,34 +141,32 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
             const isActive = router.pathname === item.href;
             return (
               <Link href={item.href} key={item.text} passHref>
-                <ListItem
-                  button
-                  selected={isActive}
-                  sx={{
-                    "&.Mui-selected": { backgroundColor: theme.palette.action.selected },
-                    textDecoration: "none",
-                  }}
-                >
-                  <ListItemIcon
+                <a style={{ textDecoration: "none", color: "inherit" }}>
+                  <ListItem
+                    button
+                    selected={isActive}
                     sx={{
-                      color: "#fff",
-                      minWidth: 0,
-                      mr: open ? 2 : "auto",
-                      justifyContent: "center",
+                      "&.Mui-selected": { backgroundColor: theme.palette.action.selected },
                     }}
                   >
-                    {item.icon}
-                  </ListItemIcon>
-                  {open && (
-                    <ListItemText
-                      primary={item.text}
-                      primaryTypographyProps={{
+                    <ListItemIcon
+                      sx={{
                         color: "#fff",
-                        sx: { textDecoration: "none" },
+                        minWidth: 0,
+                        mr: open ? 2 : "auto",
+                        justifyContent: "center",
                       }}
-                    />
-                  )}
-                </ListItem>
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                    {open && (
+                      <ListItemText
+                        primary={item.text}
+                        primaryTypographyProps={{ color: "#fff", sx: { textDecoration: "none" } }}
+                      />
+                    )}
+                  </ListItem>
+                </a>
               </Link>
             );
           })}
@@ -203,6 +201,13 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
         </AppBar>
         <Box sx={{ p: 3, flexGrow: 1 }}>{children}</Box>
       </Main>
+      {/* Global override to remove underline from all anchors */}
+      <style jsx global>{`
+        a {
+          text-decoration: none !important;
+          color: inherit !important;
+        }
+      `}</style>
     </Box>
   );
 }
