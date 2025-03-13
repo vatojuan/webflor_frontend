@@ -1,7 +1,17 @@
 // /frontend/components/DashboardLayout.js
 import React, { useState } from "react";
 import { useTheme, styled } from "@mui/material/styles";
-import { AppBar, Toolbar, Box, Divider, IconButton, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import {
+  AppBar,
+  Toolbar,
+  Box,
+  Divider,
+  IconButton,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+} from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import EditIcon from "@mui/icons-material/Edit";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
@@ -91,7 +101,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
   const drawerBg = theme.palette.mode === "dark" ? "#4E342E" : theme.palette.primary.main;
   const appBarBg = theme.palette.mode === "dark" ? "#3E2723" : theme.palette.primary.dark;
 
-  // Nuevos items del menú según lo solicitado:
+  // Items del menú según lo solicitado
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, href: "/admin/dashboard" },
     { text: "Editar BD", icon: <EditIcon />, href: "/admin/editar_db" },
@@ -110,7 +120,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
         <DrawerHeader>
           {open && (
             <Link href="/" passHref>
-              <a>
+              <a style={{ textDecoration: "none" }}>
                 <Image
                   src={drawerBg === "#4E342E" ? "/images/Fap rrhh-marca-naranja(chico).png" : "/images/Fap rrhh-marca-blanca(chico).png"}
                   alt="Logo"
@@ -136,6 +146,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
                   selected={isActive}
                   sx={{
                     "&.Mui-selected": { backgroundColor: theme.palette.action.selected },
+                    textDecoration: "none",
                   }}
                 >
                   <ListItemIcon
@@ -149,7 +160,13 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
                     {item.icon}
                   </ListItemIcon>
                   {open && (
-                    <ListItemText primary={item.text} primaryTypographyProps={{ color: "#fff" }} />
+                    <ListItemText
+                      primary={item.text}
+                      primaryTypographyProps={{
+                        color: "#fff",
+                        sx: { textDecoration: "none" },
+                      }}
+                    />
                   )}
                 </ListItem>
               </Link>
@@ -162,7 +179,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
           <Toolbar>
             {!open && (
               <Link href="/" passHref>
-                <a>
+                <a style={{ textDecoration: "none" }}>
                   <Image
                     src={theme.palette.mode === "dark" ? "/images/Fap-marca-naranja(chico).png" : "/images/Fap-marca-blanca(chico).png"}
                     alt="Logo AppBar"
@@ -178,9 +195,9 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
             <IconButton sx={{ color: "#fff", mr: 2 }}>
               <NotificationsIcon />
             </IconButton>
-            {/* Interruptor de tema oscuro */}
-            <IconButton onClick={toggleDarkMode} sx={{ color: "#fff" }}>
-              {currentMode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
+            {/* Interruptor de modo oscuro */}
+            <IconButton onClick={toggleDarkMode ? toggleDarkMode : () => {}} sx={{ color: "#fff" }}>
+              {theme.palette.mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
           </Toolbar>
         </AppBar>
