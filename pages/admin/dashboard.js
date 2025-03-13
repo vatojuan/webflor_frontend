@@ -1,9 +1,9 @@
-// frontend/pages/admin/dashboard.js
 import { useEffect, useState } from "react";
 import useAdminAuth from "../../hooks/useAdminAuth";
+import AdminSidebar from "../../components/AdminSidebar"; // Importamos la barra lateral
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts"; // Para gráficos
 
 export default function AdminDashboard() {
-  // Este hook redirige al login si no hay token
   useAdminAuth();
 
   const [dashboardData, setDashboardData] = useState(null);
@@ -11,13 +11,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
-    if (!token) return; // Debería redirigir gracias al hook
+    if (!token) return;
 
-    // Realiza una petición a un endpoint protegido del backend
     fetch("https://api.fapmendoza.online/admin/protected", {
-      headers: {
-        "Authorization": `Bearer ${token}`,
-      },
+      headers: { "Authorization": `Bearer ${token}` },
     })
       .then((response) => {
         if (!response.ok) throw new Error("Token inválido o sesión expirada");
@@ -27,26 +24,41 @@ export default function AdminDashboard() {
       .catch((err) => setError(err.message));
   }, []);
 
+  // Datos de prueba para gráficos
+  const sampleMetrics = [
+    { name: "Usuarios", total: 120 },
+    { name: "Postulaciones", total: 85 },
+    { name: "Ofertas", total: 40 },
+    { name: "Matchings", total: 30 },
+    { name: "Propuestas", total: 25 },
+  ];
+
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>Dashboard Administrativo</h1>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {dashboardData ? (
-        <div>
-          <p>{dashboardData.message}</p>
-          {/* Aquí podrás agregar más componentes, gráficos o secciones de logs */}
-          <section>
-            <h2>Métricas Generales</h2>
-            {/* Ejemplo: Estadísticas de usuarios, ofertas, matchings, etc. */}
-          </section>
-          <section>
-            <h2>Logs y Actividad</h2>
-            {/* Ejemplo: Logs de contactos, propuestas, etc. */}
-          </section>
-        </div>
-      ) : (
-        !error && <p>Cargando datos...</p>
-      )}
+    <div className="admin-container">
+      <AdminSidebar /> {/* Agregamos la barra lateral */}
+      <div className="admin-content">
+        <h1>Dashboard Administrativo</h1>
+        {error && <p className="error-message">{error}</p>}
+        {dashboardData ? (
+          <div>
+            <p>{dashboardData.message}</p>
+            <section>
+              <h2>Métricas Generales</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={sampleMetrics}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="total" fill="#4CAF50" />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+          </div>
+        ) : (
+          !error && <p>Cargando datos...</p>
+        )}
+      </div>
     </div>
   );
 }
