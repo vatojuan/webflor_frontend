@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import useAdminAuth from "../../hooks/useAdminAuth";
+import DashboardLayout from "../../components/DashboardLayout";
 import {
   Container,
   Paper,
@@ -28,8 +29,8 @@ import ClearAllIcon from "@mui/icons-material/ClearAll";
 import axios from "axios";
 import Head from "next/head";
 
-export default function AdminAgregarCV() {
-  // Verifica que el usuario tenga permisos de administrador
+export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
+  // Verifica permisos de administrador
   useAdminAuth();
 
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -42,7 +43,7 @@ export default function AdminAgregarCV() {
     message: ""
   });
 
-  // Maneja la selección de archivos y guarda una lista para previsualización
+  // Maneja la selección de archivos y genera una lista para previsualización
   const handleFilesChange = (e) => {
     const filesArray = Array.from(e.target.files);
     setSelectedFiles(filesArray);
@@ -58,7 +59,7 @@ export default function AdminAgregarCV() {
     setResults([]);
   };
 
-  // Función que envía los archivos al endpoint de carga masiva
+  // Envía los archivos al endpoint de carga masiva
   const uploadFiles = async () => {
     if (selectedFiles.length === 0) {
       setSnackbar({
@@ -97,7 +98,7 @@ export default function AdminAgregarCV() {
       setTimeout(() => {
         clearResults();
       }, 60000);
-      // Limpia la selección de archivos después de la subida exitosa
+      // Limpia la selección de archivos tras la subida exitosa
       clearSelection();
     } catch (error) {
       console.error("Error en la carga de CVs", error);
@@ -113,7 +114,7 @@ export default function AdminAgregarCV() {
   };
 
   return (
-    <>
+    <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Head>
         <title>Agregar CVs - Administrador</title>
       </Head>
@@ -253,6 +254,6 @@ export default function AdminAgregarCV() {
           </Alert>
         </Snackbar>
       </Container>
-    </>
+    </DashboardLayout>
   );
 }
