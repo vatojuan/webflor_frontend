@@ -16,7 +16,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  Divider
+  Divider,
+  Alert
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
@@ -25,7 +26,8 @@ import axios from "axios";
 import Head from "next/head";
 
 export default function AdminAgregarCV() {
-  useAdminAuth(); // Verifica autenticación de administrador
+  // Verifica autenticación de administrador
+  useAdminAuth();
 
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -70,7 +72,7 @@ export default function AdminAgregarCV() {
         severity: "success",
         message: "CVs procesados correctamente."
       });
-      // Se puede limpiar automáticamente luego de 60 segundos o usar el botón de limpiar
+      // Auto-limpia los logs después de 60 segundos
       setTimeout(() => {
         clearResults();
       }, 60000);
@@ -178,16 +180,14 @@ export default function AdminAgregarCV() {
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
-          <Box>
-            <Alert
-              onClose={() => setSnackbar({ ...snackbar, open: false })}
-              severity={snackbar.severity}
-              variant="filled"
-              sx={{ width: "100%" }}
-            >
-              {snackbar.message}
-            </Alert>
-          </Box>
+          <Alert
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
         </Snackbar>
       </Container>
     </>
