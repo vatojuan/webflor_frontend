@@ -1,17 +1,16 @@
-import { useEffect, useState } from "react";
+// /frontend/pages/admin/dashboard.js
+import React from "react";
+import { Box, Card, CardContent, Typography, Grid, Accordion, AccordionSummary, AccordionDetails, List, ListItem } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
-import AdminSidebar from "../../components/AdminSidebar";
-import Link from "next/link";
 
 export default function AdminDashboard() {
-  // Validación de autenticación
+  // Validar autenticación de administrador
   useAdminAuth();
 
-  const [dashboardData, setDashboardData] = useState(null);
-  const [error, setError] = useState("");
-
-  // Datos de ejemplo para las métricas (posteriormente se conectarán a datos reales)
-  const sampleMetrics = {
+  // Datos de ejemplo para métricas y matchings (posteriormente se integrarán datos reales)
+  const metricsData = {
     usuarios: 120,
     postulaciones: 85,
     ofertas: 40,
@@ -19,13 +18,13 @@ export default function AdminDashboard() {
     propuestas: 25,
   };
 
-  const sampleMatchings = {
+  const matchingData = {
     avanzadas: 5,
     enProceso: 3,
   };
 
   // Datos de ejemplo para logs
-  const sampleLogs1 = [
+  const logsGroup1 = [
     "Contacto: Juan Pérez - 2025-03-13 10:00",
     "Avance propuesta: Propuesta A actualizada",
     "Pago realizado: $200 - 2025-03-12",
@@ -35,161 +34,82 @@ export default function AdminDashboard() {
     "Entrevista con IA: Finalizada",
   ];
 
-  const sampleLogs2 = [
+  const logsGroup2 = [
     "Registro: María González",
     "Postulación: Oferta X por Carlos",
     "Nueva Oferta: Desarrollador React",
   ];
 
-  // Simulamos la obtención de datos protegidos (ya que el login ya funcionó)
-  useEffect(() => {
-    // Aquí podrías realizar la petición real al endpoint protegido si lo deseas.
-    // Para este ejemplo, simulamos la respuesta.
-    setDashboardData({
-      message:
-        "Ruta protegida para administradores, bienvenido support@fapmendoza.com",
-    });
-  }, []);
-
   return (
-    <div className="admin-container">
-      <AdminSidebar />
-      <div className="admin-content">
-        {/* AppBar mejorado */}
-        <div className="appbar">
-          <h1>Dashboard Administrativo</h1>
-          <div className="appbar-actions">
-            <Link href="/admin/logout">
-              <a>Logout</a>
-            </Link>
-          </div>
-        </div>
-        {error && <p className="error-message">{error}</p>}
-        {dashboardData ? (
-          <>
-            <p>{dashboardData.message}</p>
-            {/* Tarjetas en dos columnas */}
-            <div className="cards-container">
-              <div className="card">
-                <h2>Datos de la Base de Datos</h2>
-                <ul>
-                  <li>Usuarios: {sampleMetrics.usuarios}</li>
-                  <li>Postulaciones: {sampleMetrics.postulaciones}</li>
-                  <li>Ofertas: {sampleMetrics.ofertas}</li>
-                  <li>Matchings: {sampleMetrics.matchings}</li>
-                  <li>Propuestas: {sampleMetrics.propuestas}</li>
-                </ul>
-              </div>
-              <div className="card">
-                <h2>Matchings en Proceso</h2>
-                <ul>
-                  <li>Avanzadas: {sampleMatchings.avanzadas}</li>
-                  <li>En Proceso: {sampleMatchings.enProceso}</li>
-                </ul>
-              </div>
-            </div>
-            {/* Secciones desplegables para logs */}
-            <div className="accordion-container">
-              <details>
-                <summary>
-                  Logs de Actividad - Contactos, Avances, Pagos, Peticiones y Más
-                </summary>
-                <ul>
-                  {sampleLogs1.map((log, index) => (
-                    <li key={index}>{log}</li>
-                  ))}
-                </ul>
-              </details>
-              <details>
-                <summary>
-                  Logs de Actividad - Registro de Personas, Postulaciones y Ofertas
-                </summary>
-                <ul>
-                  {sampleLogs2.map((log, index) => (
-                    <li key={index}>{log}</li>
-                  ))}
-                </ul>
-              </details>
-            </div>
-          </>
-        ) : (
-          !error && <p>Cargando datos...</p>
-        )}
-      </div>
-      <style jsx>{`
-        .admin-container {
-          display: flex;
-          min-height: 100vh;
-          background: #f0f2f5;
-        }
-        .admin-content {
-          flex: 1;
-          padding: 20px;
-          background: #fff;
-        }
-        .appbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: #2c3e50;
-          color: #fff;
-          padding: 10px 20px;
-          border-radius: 4px;
-          margin-bottom: 20px;
-        }
-        .appbar h1 {
-          margin: 0;
-        }
-        .appbar-actions a {
-          color: #ecf0f1;
-          text-decoration: none;
-          font-weight: bold;
-        }
-        .cards-container {
-          display: flex;
-          gap: 20px;
-          margin-bottom: 20px;
-        }
-        .card {
-          flex: 1;
-          background: #ecf0f1;
-          padding: 20px;
-          border-radius: 4px;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .card h2 {
-          margin-top: 0;
-          font-size: 18px;
-          margin-bottom: 10px;
-        }
-        .card ul {
-          list-style: none;
-          padding: 0;
-        }
-        .card ul li {
-          margin-bottom: 6px;
-          font-size: 16px;
-        }
-        .accordion-container details {
-          background: #ecf0f1;
-          padding: 10px;
-          margin-bottom: 10px;
-          border-radius: 4px;
-        }
-        .accordion-container summary {
-          font-weight: bold;
-          cursor: pointer;
-          outline: none;
-        }
-        .accordion-container ul {
-          margin: 10px 0 0 20px;
-          padding: 0;
-        }
-        .error-message {
-          color: red;
-          font-weight: bold;
-        }
-      `}</style>
-    </div>
+    <DashboardLayout>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h4" gutterBottom>
+          Dashboard Administrativo
+        </Typography>
+        <Typography variant="subtitle1">
+          Ruta protegida para administradores, bienvenido support@fapmendoza.com
+        </Typography>
+      </Box>
+      <Grid container spacing={2}>
+        {/* Tarjeta de datos de la base de datos */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Datos de la Base de Datos
+              </Typography>
+              <Typography variant="body1">Usuarios: {metricsData.usuarios}</Typography>
+              <Typography variant="body1">Postulaciones: {metricsData.postulaciones}</Typography>
+              <Typography variant="body1">Ofertas: {metricsData.ofertas}</Typography>
+              <Typography variant="body1">Matchings: {metricsData.matchings}</Typography>
+              <Typography variant="body1">Propuestas: {metricsData.propuestas}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        {/* Tarjeta de matchings en proceso */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Matchings en Proceso
+              </Typography>
+              <Typography variant="body1">Avanzadas: {matchingData.avanzadas}</Typography>
+              <Typography variant="body1">En Proceso: {matchingData.enProceso}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+      {/* Secciones desplegables para logs */}
+      <Box sx={{ mt: 4 }}>
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="logs1-content" id="logs1-header">
+            <Typography variant="h6">Logs - Contactos, Avances, Pagos, Peticiones y Más</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <List>
+              {logsGroup1.map((log, index) => (
+                <ListItem key={index}>
+                  <Typography variant="body2">{log}</Typography>
+                </ListItem>
+              ))}
+            </List>
+          </AccordionDetails>
+        </Accordion>
+        <Accordion sx={{ mt: 2 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="logs2-content" id="logs2-header">
+            <Typography variant="h6">Logs - Registro, Postulaciones y Ofertas</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <List>
+              {logsGroup2.map((log, index) => (
+                <ListItem key={index}>
+                  <Typography variant="body2">{log}</Typography>
+                </ListItem>
+              ))}
+            </List>
+          </AccordionDetails>
+        </Accordion>
+      </Box>
+    </DashboardLayout>
   );
 }
