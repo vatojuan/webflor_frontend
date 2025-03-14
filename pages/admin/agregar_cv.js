@@ -18,8 +18,7 @@ import {
   ListItem,
   ListItemText,
   Divider,
-  Alert,
-  ListSubheader
+  Alert
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
@@ -30,7 +29,6 @@ import axios from "axios";
 import Head from "next/head";
 
 export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
-  // Verifica permisos de administrador
   useAdminAuth();
 
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -43,23 +41,19 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
     message: ""
   });
 
-  // Maneja la selección de archivos y genera una lista para previsualización
   const handleFilesChange = (e) => {
     const filesArray = Array.from(e.target.files);
     setSelectedFiles(filesArray);
   };
 
-  // Limpia la selección de archivos
   const clearSelection = () => {
     setSelectedFiles([]);
   };
 
-  // Limpia los resultados (logs) del proceso
   const clearResults = () => {
     setResults([]);
   };
 
-  // Envía los archivos al endpoint de carga masiva
   const uploadFiles = async () => {
     if (selectedFiles.length === 0) {
       setSnackbar({
@@ -75,8 +69,9 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
     });
     setUploading(true);
     try {
+      // Se actualiza la URL para coincidir con el endpoint: /admin_upload
       const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/cv/admin_upload`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin_upload`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -94,11 +89,9 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
         severity: "success",
         message: "CVs procesados correctamente."
       });
-      // Auto-limpia los logs después de 60 segundos
       setTimeout(() => {
         clearResults();
       }, 60000);
-      // Limpia la selección de archivos tras la subida exitosa
       clearSelection();
     } catch (error) {
       console.error("Error en la carga de CVs", error);
