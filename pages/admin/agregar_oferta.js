@@ -16,8 +16,7 @@ import {
 import useAdminAuth from "../../hooks/useAdminAuth";
 
 export default function AgregarOferta() {
-  // Verifica que el usuario administrador esté autenticado y obtiene su información.
-  // Se asume que useAdminAuth devuelve { user } con al menos la propiedad id.
+  // Obtiene el usuario del hook de autenticación de administrador
   const { user } = useAdminAuth();
   const router = useRouter();
 
@@ -29,7 +28,6 @@ export default function AgregarOferta() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   useEffect(() => {
-    // Si no hay usuario (por ejemplo, no está autenticado) redirige a login.
     if (!user) {
       router.push("/login");
     }
@@ -67,7 +65,6 @@ export default function AgregarOferta() {
       setSnackbar({ open: true, message: "No se encontró el id del usuario. Inicia sesión de nuevo.", severity: "error" });
       return;
     }
-    // Calculamos la fecha de expiración si se ha elegido una opción
     const expirationDate = expirationOption ? computeExpirationDate() : null;
     try {
       const res = await fetch("/api/job/create-admin", {
@@ -78,7 +75,7 @@ export default function AgregarOferta() {
           description,
           requirements,
           expirationDate: expirationDate ? expirationDate.toISOString() : null,
-          userId: user.id, // Se utiliza el id del administrador obtenido del hook
+          userId: user.id,
         }),
       });
       if (res.ok) {
@@ -97,7 +94,6 @@ export default function AgregarOferta() {
     router.push("/admin/dashboard");
   };
 
-  // Si aún no se tiene la información del usuario, se muestra un mensaje de carga.
   if (!user) {
     return <Typography align="center" sx={{ mt: 4 }}>Cargando...</Typography>;
   }
@@ -107,11 +103,7 @@ export default function AgregarOferta() {
       <Typography variant="h4" gutterBottom>
         Publicar Oferta de Empleo
       </Typography>
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-      >
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <TextField
           label="Título"
           value={title}
@@ -137,7 +129,6 @@ export default function AgregarOferta() {
           rows={3}
           fullWidth
         />
-        {/* Desplegable para seleccionar la opción de expiración */}
         <FormControl fullWidth>
           <InputLabel id="expiration-option-label">Expiración</InputLabel>
           <Select
@@ -154,7 +145,6 @@ export default function AgregarOferta() {
             <MenuItem value="manual">Poner fecha manualmente</MenuItem>
           </Select>
         </FormControl>
-        {/* Si se selecciona "Poner fecha manualmente", se muestra un campo para ingresar la fecha */}
         {expirationOption === "manual" && (
           <TextField
             label="Fecha de Expiración"
@@ -169,11 +159,7 @@ export default function AgregarOferta() {
           <Button type="submit" variant="contained" color="primary">
             Publicar Oferta
           </Button>
-          <Button
-            variant="outlined"
-            onClick={handleCancel}
-            sx={{ color: "text.primary", borderColor: "text.primary" }}
-          >
+          <Button variant="outlined" onClick={handleCancel} sx={{ color: "text.primary", borderColor: "text.primary" }}>
             Cancelar
           </Button>
         </Box>
@@ -184,15 +170,15 @@ export default function AgregarOferta() {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant="filled" sx={{ width: "100%" }}>
           {snackbar.message}
         </Alert>
       </Snackbar>
     </Container>
   );
+}
+
+// Fuerza el renderizado en cada request para evitar problemas de pre-rendering
+export async function getServerSideProps() {
+  return { props: {} };
 }
