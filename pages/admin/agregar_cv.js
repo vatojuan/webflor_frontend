@@ -67,10 +67,21 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
     selectedFiles.forEach((file) => {
       formData.append("files", file);
     });
+
+    // Obtener el token almacenado en localStorage (asegúrate de que se guarde tras el login)
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setSnackbar({
+        open: true,
+        severity: "error",
+        message: "Error: Usuario no autenticado."
+      });
+      return;
+    }
+
     setUploading(true);
     try {
-      // Obtener el token desde localStorage (asegúrate de que esté almacenado tras el login)
-      const token = localStorage.getItem("token");
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/admin_upload`,
         formData,
