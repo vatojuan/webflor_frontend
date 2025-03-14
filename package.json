@@ -19,6 +19,7 @@
     "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.3",
     "next": "15.2.1",
+    "pg": "^8.14.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.1"
