@@ -16,8 +16,8 @@ import {
 import useAdminAuth from "../../hooks/useAdminAuth";
 
 export default function AgregarOferta() {
-  // Obtiene el usuario del hook de autenticación de administrador
-  const { user } = useAdminAuth();
+  // Protegemos la destructuración en caso de que useAdminAuth devuelva undefined
+  const { user } = useAdminAuth() || {};
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -28,6 +28,7 @@ export default function AgregarOferta() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   useEffect(() => {
+    // Si no hay usuario, redirige a login
     if (!user) {
       router.push("/login");
     }
@@ -178,7 +179,7 @@ export default function AgregarOferta() {
   );
 }
 
-// Fuerza el renderizado en cada request para evitar problemas de pre-rendering
+// Forzar el renderizado en cada request para evitar problemas de prerendering
 export async function getServerSideProps() {
   return { props: {} };
 }
