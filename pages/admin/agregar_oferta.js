@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
 import { 
   Box, 
   Container, 
@@ -17,9 +16,9 @@ import {
 import useAdminAuth from "../../hooks/useAdminAuth";
 
 export default function AgregarOferta() {
-  // Verificar que el usuario sea administrador
-  useAdminAuth();
-  const { data: session, status } = useSession();
+  // Verifica que el usuario administrador esté autenticado y obtiene su información.
+  // Se asume que useAdminAuth devuelve { user } con al menos la propiedad id.
+  const { user } = useAdminAuth();
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -30,10 +29,11 @@ export default function AgregarOferta() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   useEffect(() => {
-    if (status !== "loading" && !session) {
+    // Si no hay usuario (por ejemplo, no está autenticado) redirige a login.
+    if (!user) {
       router.push("/login");
     }
-  }, [session, status, router]);
+  }, [user, router]);
 
   // Calcula la fecha de expiración según la opción seleccionada
   const computeExpirationDate = () => {
@@ -63,7 +63,7 @@ export default function AgregarOferta() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!session.user.id) {
+    if (!user?.id) {
       setSnackbar({ open: true, message: "No se encontró el id del usuario. Inicia sesión de nuevo.", severity: "error" });
       return;
     }
@@ -78,12 +78,11 @@ export default function AgregarOferta() {
           description,
           requirements,
           expirationDate: expirationDate ? expirationDate.toISOString() : null,
-          userId: session.user.id, // Se utiliza el id del usuario administrador
+          userId: user.id, // Se utiliza el id del administrador obtenido del hook
         }),
       });
       if (res.ok) {
         setSnackbar({ open: true, message: "Oferta publicada", severity: "success" });
-        // Redirige a la lista de ofertas del administrador tras unos segundos
         setTimeout(() => router.push("/admin/mis_ofertas"), 2000);
       } else {
         const data = await res.json();
@@ -98,7 +97,8 @@ export default function AgregarOferta() {
     router.push("/admin/dashboard");
   };
 
-  if (status === "loading" || !session) {
+  // Si aún no se tiene la información del usuario, se muestra un mensaje de carga.
+  if (!user) {
     return <Typography align="center" sx={{ mt: 4 }}>Cargando...</Typography>;
   }
 
