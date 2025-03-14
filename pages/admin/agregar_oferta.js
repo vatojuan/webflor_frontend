@@ -16,8 +16,7 @@ import {
 import useAdminAuth from "../../hooks/useAdminAuth";
 
 export default function AgregarOferta() {
-  // Extraemos "user" de forma segura a partir del hook modificado
-  const { user } = useAdminAuth();
+  const { user, loading } = useAdminAuth();
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -27,12 +26,15 @@ export default function AgregarOferta() {
   const [manualExpirationDate, setManualExpirationDate] = useState("");
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
-  useEffect(() => {
-    // Si aún no hay usuario, redirige a /admin/login
-    if (!user) {
-      router.push("/admin/login");
-    }
-  }, [user, router]);
+  // Mientras se carga la información, mostramos "Cargando..."
+  if (loading) {
+    return <Typography align="center" sx={{ mt: 4 }}>Cargando...</Typography>;
+  }
+
+  // Si no hay usuario (debería redirigir, pero por seguridad)
+  if (!user) {
+    return null;
+  }
 
   // Calcula la fecha de expiración según la opción seleccionada
   const computeExpirationDate = () => {
@@ -94,10 +96,6 @@ export default function AgregarOferta() {
   const handleCancel = () => {
     router.push("/admin/dashboard");
   };
-
-  if (!user) {
-    return <Typography align="center" sx={{ mt: 4 }}>Cargando...</Typography>;
-  }
 
   return (
     <Container maxWidth="sm" sx={{ textAlign: "center", mt: 4 }}>
