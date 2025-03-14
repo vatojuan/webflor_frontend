@@ -69,12 +69,16 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
     });
     setUploading(true);
     try {
-      // Se actualiza la URL para coincidir con el endpoint: /admin_upload
+      // Obtener el token desde localStorage (asegúrate de que esté almacenado tras el login)
+      const token = localStorage.getItem("token");
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/admin_upload`,
         formData,
         {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "Authorization": `Bearer ${token}`
+          },
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total
