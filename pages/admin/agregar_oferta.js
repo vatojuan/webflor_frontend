@@ -16,8 +16,9 @@ import {
 import useAdminAuth from "../../hooks/useAdminAuth";
 
 export default function AgregarOferta() {
-  // Protegemos la destructuración en caso de que useAdminAuth devuelva undefined
-  const { user } = useAdminAuth() || {};
+  // Usamos el hook y extraemos "user" de forma segura.
+  const adminAuth = useAdminAuth();
+  const user = adminAuth?.user;
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -28,13 +29,13 @@ export default function AgregarOferta() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   useEffect(() => {
-    // Si no hay usuario, redirige a login
-    if (!user) {
-      router.push("/login");
+    // Si no hay usuario (por ejemplo, el hook aún no tiene datos o no está autenticado), redirige a login.
+    if (user === null || user === undefined) {
+      router.push("/admin/login");
     }
   }, [user, router]);
 
-  // Calcula la fecha de expiración según la opción seleccionada
+  // Función que calcula la fecha de expiración según la opción seleccionada.
   const computeExpirationDate = () => {
     const now = new Date();
     switch (expirationOption) {
@@ -95,6 +96,7 @@ export default function AgregarOferta() {
     router.push("/admin/dashboard");
   };
 
+  // Mientras no se tenga la info del usuario, mostramos "Cargando..."
   if (!user) {
     return <Typography align="center" sx={{ mt: 4 }}>Cargando...</Typography>;
   }
@@ -179,7 +181,7 @@ export default function AgregarOferta() {
   );
 }
 
-// Forzar el renderizado en cada request para evitar problemas de prerendering
+// Forzar SSR para evitar prerendering en build time
 export async function getServerSideProps() {
   return { props: {} };
 }
