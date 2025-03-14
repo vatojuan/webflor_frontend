@@ -68,8 +68,8 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
       formData.append("files", file);
     });
 
-    // Obtener el token almacenado en localStorage (asegúrate de que se guarde tras el login)
-    const token = localStorage.getItem("token");
+    // Obtener el token almacenado en localStorage bajo "adminToken"
+    const token = localStorage.getItem("adminToken");
 
     if (!token) {
       setSnackbar({
