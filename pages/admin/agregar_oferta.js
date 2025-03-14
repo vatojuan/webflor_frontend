@@ -26,17 +26,14 @@ export default function AgregarOferta() {
   const [manualExpirationDate, setManualExpirationDate] = useState("");
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
-  // Mientras se carga la información, mostramos "Cargando..."
   if (loading) {
     return <Typography align="center" sx={{ mt: 4 }}>Cargando...</Typography>;
   }
 
-  // Si no hay usuario (debería redirigir, pero por seguridad)
   if (!user) {
     return null;
   }
 
-  // Calcula la fecha de expiración según la opción seleccionada
   const computeExpirationDate = () => {
     const now = new Date();
     switch (expirationOption) {
@@ -70,7 +67,7 @@ export default function AgregarOferta() {
     }
     const expirationDate = expirationOption ? computeExpirationDate() : null;
     try {
-      const res = await fetch("/api/job/create-admin", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/job/create-admin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
