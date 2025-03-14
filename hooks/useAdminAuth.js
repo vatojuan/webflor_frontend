@@ -2,22 +2,27 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 
 export default function useAdminAuth() {
-  const [admin, setAdmin] = useState({ user: null });
+  const [user, setUser] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Verifica que se ejecute en el cliente
+    // Asegurarse de que se ejecuta en el cliente
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("adminToken");
       if (!token) {
         router.push("/admin/login");
       } else {
-        // Aquí puedes realizar validaciones adicionales o extraer info del token
-        // Por ejemplo, podrías decodificar el token y obtener el id del usuario administrador
-        setAdmin({ user: { id: "adminId", token } });
+        try {
+          // Supongamos que el token es un JSON que contiene la info del usuario
+          const parsedUser = JSON.parse(token);
+          setUser(parsedUser);
+        } catch (error) {
+          // Si no es JSON, puedes asignar un objeto por defecto o decodificarlo si es JWT
+          setUser({ id: "admin123", email: "support@fapmendoza.com" });
+        }
       }
     }
   }, [router]);
 
-  return admin; // Siempre retorna un objeto, aunque inicialmente user es null
+  return { user }; // Siempre devuelve un objeto, aunque inicialmente user es null
 }
