@@ -46,10 +46,8 @@ export default function UploadCVPage() {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
       // Se concatena el mensaje de éxito con la recomendación de revisar spam
-      setMessage(
-        (res.data.message || "CV procesado exitosamente.") +
-          " Te recomendamos revisar tu bandeja de correo no deseado o spam."
-      );
+      setMessage(res.data.message || "CV procesado exitosamente.");
+
       if (res.data.extracted_text) {
         setExtractedText(res.data.extracted_text);
       }
