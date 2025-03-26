@@ -19,6 +19,9 @@ export default function AgregarOferta() {
   const { user, loading } = useAdminAuth();
   const router = useRouter();
 
+  // Definimos el ID fijo para el admin
+  const adminUserId = 1;
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [requirements, setRequirements] = useState("");
@@ -61,10 +64,7 @@ export default function AgregarOferta() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user?.id) {
-      setSnackbar({ open: true, message: "No se encontró el id del usuario. Inicia sesión de nuevo.", severity: "error" });
-      return;
-    }
+    // En lugar de usar user.id, usamos el ID fijo para admin
     const expirationDate = expirationOption ? computeExpirationDate() : null;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/job/create-admin`, {
@@ -75,7 +75,7 @@ export default function AgregarOferta() {
           description,
           requirements,
           expirationDate: expirationDate ? expirationDate.toISOString() : null,
-          userId: user.id,
+          userId: adminUserId,
         }),
       });
       if (res.ok) {
