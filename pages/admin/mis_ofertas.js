@@ -45,6 +45,7 @@ export default function MisOfertas() {
     }
   }, [user]);
 
+  // Al editar, se conserva el userId original de la oferta, sin modificarlo
   const handleEdit = (offer) => {
     setSelectedOffer(offer);
     setOpenEditDialog(true);
@@ -71,11 +72,13 @@ export default function MisOfertas() {
   };
 
   const handleEditChange = (field, value) => {
+    // Actualiza el campo sin modificar el userId existente
     setSelectedOffer({ ...selectedOffer, [field]: value });
   };
 
   const handleEditSubmit = async () => {
     try {
+      // En la edición, se mantiene el userId original de la oferta
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/job/update-admin`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
