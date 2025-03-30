@@ -48,12 +48,10 @@ export default function EditarDB() {
   // Carga de usuarios al montar el componente
   useEffect(() => {
     if (!loading) {
-      const token = localStorage.getItem("adminToken");
-      console.log("🔐 Token recuperado:", token);
       fetchUsers();
     }
   }, [loading]);
-  
+
   // Función para obtener la lista de usuarios desde el backend
   const fetchUsers = async () => {
     try {
