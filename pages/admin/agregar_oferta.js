@@ -64,12 +64,16 @@ export default function AgregarOferta() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // En lugar de usar user.id, usamos el ID fijo para admin
     const expirationDate = expirationOption ? computeExpirationDate() : null;
+    // Obtenemos el token del admin almacenado en localStorage
+    const token = localStorage.getItem("adminToken");
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/job/create-admin`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           title,
           description,
