@@ -197,7 +197,7 @@ export default function AgregarOferta() {
             >
               <MenuItem value="employer">Empleador</MenuItem>
               <MenuItem value="admin">Administrador</MenuItem>
-              <MenuItem value="instagram">Instagram</MenuItem>
+              <MenuItem value="red_social">Red Social</MenuItem>
             </Select>
           </FormControl>
           {/* Checkbox para indicar que la oferta es pagada */}
