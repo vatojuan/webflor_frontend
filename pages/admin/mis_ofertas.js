@@ -115,6 +115,8 @@ export default function MisOfertas() {
                 <TableCell>Descripción</TableCell>
                 <TableCell>Requisitos</TableCell>
                 <TableCell>Expiración</TableCell>
+                <TableCell>Etiqueta</TableCell>
+                <TableCell>Fuente</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
@@ -132,6 +134,8 @@ export default function MisOfertas() {
                   <TableCell>
                     {offer.expirationDate ? new Date(offer.expirationDate).toLocaleDateString() : "Sin expiración"}
                   </TableCell>
+                  <TableCell>{offer.label || "automatic"}</TableCell>
+                  <TableCell>{offer.source || "N/A"}</TableCell>
                   <TableCell>
                     <Button onClick={() => handleEdit(offer)} variant="outlined" size="small" sx={{ mr: 1 }}>
                       Editar
@@ -182,6 +186,35 @@ export default function MisOfertas() {
               value={selectedOffer?.expirationDate ? selectedOffer.expirationDate.split("T")[0] : ""}
               onChange={(e) => handleEditChange("expirationDate", e.target.value)}
             />
+            {/* Selector para modificar la etiqueta (label) */}
+            <TextField
+              select
+              label="Etiqueta"
+              fullWidth
+              value={selectedOffer?.label || "automatic"}
+              onChange={(e) => handleEditChange("label", e.target.value)}
+              SelectProps={{
+                native: true,
+              }}
+            >
+              <option value="automatic">Automático</option>
+              <option value="manual">Manual</option>
+            </TextField>
+            {/* Selector para modificar la fuente (source) */}
+            <TextField
+              select
+              label="Fuente"
+              fullWidth
+              value={selectedOffer?.source || "admin"}
+              onChange={(e) => handleEditChange("source", e.target.value)}
+              SelectProps={{
+                native: true,
+              }}
+            >
+              <option value="employer">Empleador</option>
+              <option value="admin">Administrador</option>
+              <option value="instagram">Instagram</option>
+            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>
