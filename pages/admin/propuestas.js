@@ -33,15 +33,14 @@ export default function PropuestasPage() {
   useEffect(() => {
     if (user) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/proposals`, {
-        credentials: "include",
+        method: "GET",
+        credentials: "include", // Se envían las credenciales para la autenticación
         headers: {
           Authorization: `Bearer ${localStorage.getItem("adminToken")}`
         }
       })
         .then((res) => res.json())
-        .then((data) => {
-          setProposals(data.proposals);
-        })
+        .then((data) => setProposals(data.proposals))
         .catch((err) => {
           console.error("Error al obtener propuestas:", err);
           setSnackbar({ open: true, message: "Error al obtener propuestas", severity: "error" });
@@ -62,6 +61,7 @@ export default function PropuestasPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalId}/send`, {
         method: "PATCH",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("adminToken")}`
@@ -128,9 +128,7 @@ export default function PropuestasPage() {
                   <TableCell>{proposal.applicant_name}</TableCell>
                   <TableCell>{proposal.label}</TableCell>
                   <TableCell>{proposal.status}</TableCell>
-                  <TableCell>
-                    {new Date(proposal.created_at).toLocaleDateString()}
-                  </TableCell>
+                  <TableCell>{new Date(proposal.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <Button
                       size="small"
@@ -140,6 +138,7 @@ export default function PropuestasPage() {
                     >
                       Ver Detalle
                     </Button>
+                    {/* El botón Enviar sólo aparece para propuestas manuales pendientes */}
                     {proposal.label === "manual" && proposal.status === "pending" && (
                       <Button
                         size="small"
@@ -172,13 +171,19 @@ export default function PropuestasPage() {
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Typography><strong>ID:</strong> {selectedProposal.id}</Typography>
               <Typography><strong>Oferta:</strong> {selectedProposal.job_title}</Typography>
-              <Typography><strong>Postulante:</strong> {selectedProposal.applicant_name} ({selectedProposal.applicant_email})</Typography>
+              <Typography>
+                <strong>Postulante:</strong> {selectedProposal.applicant_name} ({selectedProposal.applicant_email})
+              </Typography>
               <Typography><strong>Etiqueta de la Oferta:</strong> {selectedProposal.job_label}</Typography>
               <Typography><strong>Fuente de la Oferta:</strong> {selectedProposal.source}</Typography>
               <Typography><strong>Estado de la Propuesta:</strong> {selectedProposal.status}</Typography>
-              <Typography><strong>Fecha de Creación:</strong> {new Date(selectedProposal.created_at).toLocaleString()}</Typography>
+              <Typography>
+                <strong>Fecha de Creación:</strong> {new Date(selectedProposal.created_at).toLocaleString()}
+              </Typography>
               {selectedProposal.sent_at && (
-                <Typography><strong>Enviada el:</strong> {new Date(selectedProposal.sent_at).toLocaleString()}</Typography>
+                <Typography>
+                  <strong>Enviada el:</strong> {new Date(selectedProposal.sent_at).toLocaleString()}
+                </Typography>
               )}
               {selectedProposal.notes && (
                 <Typography><strong>Notas:</strong> {selectedProposal.notes}</Typography>
