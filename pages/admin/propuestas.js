@@ -33,7 +33,6 @@ export default function PropuestasPage() {
   useEffect(() => {
     if (user) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/proposals`, {
-        method: "GET",
         credentials: "include", // Se envían las credenciales para la autenticación
         headers: {
           Authorization: `Bearer ${localStorage.getItem("adminToken")}`
