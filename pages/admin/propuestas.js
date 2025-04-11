@@ -30,13 +30,19 @@ export default function PropuestasPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [refresh, setRefresh] = useState(false);
 
+  // Forzamos que la URL tenga "https://" 
+  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  const apiUrl = rawApiUrl.startsWith("https://") ? rawApiUrl : `https://${rawApiUrl}`;
+  console.log("API URL utilizada:", apiUrl);
+
   useEffect(() => {
     if (user) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/proposals`, {
-        credentials: "include", // Se envían las credenciales para la autenticación
+      fetch(`${apiUrl}/api/proposals`, {
+        method: "GET",
+        credentials: "include", // Se envían las credenciales para autenticación
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`
-        }
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
       })
         .then((res) => res.json())
         .then((data) => setProposals(data.proposals))
@@ -45,7 +51,7 @@ export default function PropuestasPage() {
           setSnackbar({ open: true, message: "Error al obtener propuestas", severity: "error" });
         });
     }
-  }, [user, refresh]);
+  }, [user, refresh, apiUrl]);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
@@ -58,13 +64,13 @@ export default function PropuestasPage() {
 
   const handleSendProposal = async (proposalId) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalId}/send`, {
+      const res = await fetch(`${apiUrl}/api/proposals/${proposalId}/send`, {
         method: "PATCH",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`
-        }
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
       });
       if (res.ok) {
         setSnackbar({ open: true, message: "Propuesta enviada", severity: "success" });
@@ -137,7 +143,7 @@ export default function PropuestasPage() {
                     >
                       Ver Detalle
                     </Button>
-                    {/* El botón Enviar sólo aparece para propuestas manuales pendientes */}
+                    {/* El botón Enviar aparece para propuestas manuales que están en estado pending */}
                     {proposal.label === "manual" && proposal.status === "pending" && (
                       <Button
                         size="small"
