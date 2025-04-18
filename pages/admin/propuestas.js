@@ -30,28 +30,27 @@ export default function PropuestasPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [refresh, setRefresh] = useState(false);
 
-  // Forzamos que la URL tenga "https://" 
-  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-  const apiUrl = rawApiUrl.startsWith("https://") ? rawApiUrl : `https://${rawApiUrl}`;
-  console.log("API URL utilizada:", apiUrl);
+  // Forzamos siempre HTTPS
+  const API_URL = "https://api.fapmendoza.online";
 
   useEffect(() => {
-    if (user) {
-      fetch(`${apiUrl}/api/proposals`, {
-        method: "GET",
-        credentials: "include", // Se envían las credenciales para autenticación
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-        },
+    if (!user) return;
+    fetch(`${API_URL}/api/proposals`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(res.statusText);
+        return res.json();
       })
-        .then((res) => res.json())
-        .then((data) => setProposals(data.proposals))
-        .catch((err) => {
-          console.error("Error al obtener propuestas:", err);
-          setSnackbar({ open: true, message: "Error al obtener propuestas", severity: "error" });
-        });
-    }
-  }, [user, refresh, apiUrl]);
+      .then((data) => setProposals(data.proposals))
+      .catch((err) => {
+        console.error("Error al obtener propuestas:", err);
+        setSnackbar({ open: true, message: "Error al obtener propuestas", severity: "error" });
+      });
+  }, [user, refresh]);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
@@ -64,24 +63,22 @@ export default function PropuestasPage() {
 
   const handleSendProposal = async (proposalId) => {
     try {
-      const res = await fetch(`${apiUrl}/api/proposals/${proposalId}/send`, {
+      const res = await fetch(`${API_URL}/api/proposals/${proposalId}/send`, {
         method: "PATCH",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
         },
       });
-      if (res.ok) {
-        setSnackbar({ open: true, message: "Propuesta enviada", severity: "success" });
-        setRefresh(!refresh);
-      } else {
-        const data = await res.json();
-        setSnackbar({ open: true, message: "Error: " + data.detail, severity: "error" });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || res.statusText);
       }
+      setSnackbar({ open: true, message: "Propuesta enviada", severity: "success" });
+      setRefresh((r) => !r);
     } catch (error) {
       console.error("Error al enviar propuesta:", error);
-      setSnackbar({ open: true, message: "Error al enviar propuesta", severity: "error" });
+      setSnackbar({ open: true, message: `Error: ${error.message}`, severity: "error" });
     }
   };
 
@@ -89,7 +86,6 @@ export default function PropuestasPage() {
     setSelectedProposal(proposal);
     setOpenDetailDialog(true);
   };
-
   const handleCloseDetail = () => {
     setSelectedProposal(null);
     setOpenDetailDialog(false);
@@ -101,9 +97,7 @@ export default function PropuestasPage() {
   return (
     <DashboardLayout>
       <Container sx={{ mt: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Propuestas
-        </Typography>
+        <Typography variant="h4" gutterBottom>Propuestas</Typography>
         <Box sx={{ mb: 2, display: "flex", gap: 1 }}>
           <TextField
             label="Buscar por oferta o postulante"
@@ -126,30 +120,20 @@ export default function PropuestasPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredProposals.map((proposal) => (
-                <TableRow key={proposal.id}>
-                  <TableCell>{proposal.id}</TableCell>
-                  <TableCell>{proposal.job_title}</TableCell>
-                  <TableCell>{proposal.applicant_name}</TableCell>
-                  <TableCell>{proposal.label}</TableCell>
-                  <TableCell>{proposal.status}</TableCell>
-                  <TableCell>{new Date(proposal.created_at).toLocaleDateString()}</TableCell>
+              {filteredProposals.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>{p.id}</TableCell>
+                  <TableCell>{p.job_title}</TableCell>
+                  <TableCell>{p.applicant_name}</TableCell>
+                  <TableCell>{p.label}</TableCell>
+                  <TableCell>{p.status}</TableCell>
+                  <TableCell>{new Date(p.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => handleOpenDetail(proposal)}
-                      sx={{ mr: 1 }}
-                    >
+                    <Button size="small" variant="outlined" onClick={() => handleOpenDetail(p)} sx={{ mr: 1 }}>
                       Ver Detalle
                     </Button>
-                    {/* El botón Enviar aparece para propuestas manuales que están en estado pending */}
-                    {proposal.label === "manual" && proposal.status === "pending" && (
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => handleSendProposal(proposal.id)}
-                      >
+                    {p.label === "manual" && p.status === "pending" && (
+                      <Button size="small" variant="contained" onClick={() => handleSendProposal(p.id)}>
                         Enviar
                       </Button>
                     )}
@@ -158,9 +142,7 @@ export default function PropuestasPage() {
               ))}
               {filteredProposals.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    No se encontraron propuestas.
-                  </TableCell>
+                  <TableCell colSpan={7} align="center">No se encontraron propuestas.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -168,7 +150,6 @@ export default function PropuestasPage() {
         </Paper>
       </Container>
 
-      {/* Modal de Detalle de Propuesta */}
       <Dialog open={openDetailDialog} onClose={handleCloseDetail} fullWidth maxWidth="md">
         <DialogTitle>Detalle de la Propuesta</DialogTitle>
         <DialogContent dividers>
@@ -176,19 +157,13 @@ export default function PropuestasPage() {
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Typography><strong>ID:</strong> {selectedProposal.id}</Typography>
               <Typography><strong>Oferta:</strong> {selectedProposal.job_title}</Typography>
-              <Typography>
-                <strong>Postulante:</strong> {selectedProposal.applicant_name} ({selectedProposal.applicant_email})
-              </Typography>
+              <Typography><strong>Postulante:</strong> {selectedProposal.applicant_name} ({selectedProposal.applicant_email})</Typography>
               <Typography><strong>Etiqueta de la Oferta:</strong> {selectedProposal.job_label}</Typography>
               <Typography><strong>Fuente de la Oferta:</strong> {selectedProposal.source}</Typography>
               <Typography><strong>Estado de la Propuesta:</strong> {selectedProposal.status}</Typography>
-              <Typography>
-                <strong>Fecha de Creación:</strong> {new Date(selectedProposal.created_at).toLocaleString()}
-              </Typography>
+              <Typography><strong>Fecha de Creación:</strong> {new Date(selectedProposal.created_at).toLocaleString()}</Typography>
               {selectedProposal.sent_at && (
-                <Typography>
-                  <strong>Enviada el:</strong> {new Date(selectedProposal.sent_at).toLocaleString()}
-                </Typography>
+                <Typography><strong>Enviada el:</strong> {new Date(selectedProposal.sent_at).toLocaleString()}</Typography>
               )}
               {selectedProposal.notes && (
                 <Typography><strong>Notas:</strong> {selectedProposal.notes}</Typography>
@@ -204,15 +179,10 @@ export default function PropuestasPage() {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
+        <Alert onClose={() => setSnackbar((s) => ({ ...s, open: false }))} severity={snackbar.severity} variant="filled">
           {snackbar.message}
         </Alert>
       </Snackbar>
