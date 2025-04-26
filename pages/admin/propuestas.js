@@ -1,3 +1,4 @@
+// pages/admin/propuestas.js
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -30,13 +31,15 @@ export default function PropuestasPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [refresh, setRefresh] = useState(false);
 
-  // Forzamos siempre HTTPS
+  // Siempre HTTPS y con slash al final para evitar 404
   const API_URL = "https://api.fapmendoza.online";
 
   useEffect(() => {
     if (!user) return;
-    fetch(`${API_URL}/api/proposals`, {
+
+    fetch(`${API_URL}/api/proposals/`, {
       method: "GET",
+      mode: "cors",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
       },
@@ -65,6 +68,7 @@ export default function PropuestasPage() {
     try {
       const res = await fetch(`${API_URL}/api/proposals/${proposalId}/send`, {
         method: "PATCH",
+        mode: "cors",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
@@ -157,13 +161,19 @@ export default function PropuestasPage() {
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Typography><strong>ID:</strong> {selectedProposal.id}</Typography>
               <Typography><strong>Oferta:</strong> {selectedProposal.job_title}</Typography>
-              <Typography><strong>Postulante:</strong> {selectedProposal.applicant_name} ({selectedProposal.applicant_email})</Typography>
-              <Typography><strong>Etiqueta de la Oferta:</strong> {selectedProposal.job_label}</Typography>
-              <Typography><strong>Fuente de la Oferta:</strong> {selectedProposal.source}</Typography>
-              <Typography><strong>Estado de la Propuesta:</strong> {selectedProposal.status}</Typography>
-              <Typography><strong>Fecha de Creación:</strong> {new Date(selectedProposal.created_at).toLocaleString()}</Typography>
+              <Typography>
+                <strong>Postulante:</strong> {selectedProposal.applicant_name} ({selectedProposal.applicant_email})
+              </Typography>
+              <Typography><strong>Etiqueta Oferta:</strong> {selectedProposal.job_label}</Typography>
+              <Typography><strong>Fuente:</strong> {selectedProposal.source}</Typography>
+              <Typography><strong>Estado:</strong> {selectedProposal.status}</Typography>
+              <Typography>
+                <strong>Creado el:</strong> {new Date(selectedProposal.created_at).toLocaleString()}
+              </Typography>
               {selectedProposal.sent_at && (
-                <Typography><strong>Enviada el:</strong> {new Date(selectedProposal.sent_at).toLocaleString()}</Typography>
+                <Typography>
+                  <strong>Enviado el:</strong> {new Date(selectedProposal.sent_at).toLocaleString()}
+                </Typography>
               )}
               {selectedProposal.notes && (
                 <Typography><strong>Notas:</strong> {selectedProposal.notes}</Typography>
