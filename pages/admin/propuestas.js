@@ -1,4 +1,5 @@
 // pages/admin/propuestas.js
+
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -8,6 +9,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  TableContainer,
   Paper,
   Button,
   TextField,
@@ -17,42 +19,48 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  CircularProgress,
 } from "@mui/material";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
-export default function PropuestasPage() {
-  const { user, loading } = useAdminAuth();
+export default function PropuestasPage({ toggleDarkMode, currentMode }) {
+  const { user, loading: loadingAuth } = useAdminAuth();
   const [proposals, setProposals] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [openDetailDialog, setOpenDetailDialog] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [refresh, setRefresh] = useState(false);
+  const [loadingProposals, setLoadingProposals] = useState(false);
 
-  // Siempre HTTPS y con slash al final para evitar 404
-  const API_URL = "https://api.fapmendoza.online";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
 
+  // Fetch propuestas
   useEffect(() => {
     if (!user) return;
 
-    fetch(`${API_URL}/api/proposals/`, {
-      method: "GET",
-      mode: "cors",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-      },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(res.statusText);
-        return res.json();
-      })
-      .then((data) => setProposals(data.proposals))
-      .catch((err) => {
+    const fetchProposals = async () => {
+      setLoadingProposals(true);
+      try {
+        const res = await fetch(`${API_URL}/api/proposals`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+          },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setProposals(Array.isArray(data.proposals) ? data.proposals : []);
+      } catch (err) {
         console.error("Error al obtener propuestas:", err);
         setSnackbar({ open: true, message: "Error al obtener propuestas", severity: "error" });
-      });
+      } finally {
+        setLoadingProposals(false);
+      }
+    };
+
+    fetchProposals();
   }, [user, refresh]);
 
   const handleSearchChange = (e) => {
@@ -68,7 +76,6 @@ export default function PropuestasPage() {
     try {
       const res = await fetch(`${API_URL}/api/proposals/${proposalId}/send`, {
         method: "PATCH",
-        mode: "cors",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
@@ -95,13 +102,25 @@ export default function PropuestasPage() {
     setOpenDetailDialog(false);
   };
 
-  if (loading) return <Typography align="center" sx={{ mt: 4 }}>Cargando...</Typography>;
+  // llamados de carga
+  if (loadingAuth || loadingProposals) {
+    return (
+      <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
+          <CircularProgress />
+        </Box>
+      </DashboardLayout>
+    );
+  }
   if (!user) return null;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Container sx={{ mt: 4 }}>
-        <Typography variant="h4" gutterBottom>Propuestas</Typography>
+        <Typography variant="h4" gutterBottom>
+          Propuestas
+        </Typography>
+
         <Box sx={{ mb: 2, display: "flex", gap: 1 }}>
           <TextField
             label="Buscar por oferta o postulante"
@@ -110,74 +129,85 @@ export default function PropuestasPage() {
             fullWidth
           />
         </Box>
-        <Paper>
+
+        <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Oferta</TableCell>
-                <TableCell>Postulante</TableCell>
-                <TableCell>Etiqueta</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Acciones</TableCell>
+                {["ID", "Oferta", "Postulante", "Etiqueta", "Status", "Fecha", "Acciones"].map((h) => (
+                  <TableCell key={h}>{h}</TableCell>
+                ))}
               </TableRow>
             </TableHead>
+
             <TableBody>
-              {filteredProposals.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>{p.id}</TableCell>
-                  <TableCell>{p.job_title}</TableCell>
-                  <TableCell>{p.applicant_name}</TableCell>
-                  <TableCell>{p.label}</TableCell>
-                  <TableCell>{p.status}</TableCell>
-                  <TableCell>{new Date(p.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Button size="small" variant="outlined" onClick={() => handleOpenDetail(p)} sx={{ mr: 1 }}>
-                      Ver Detalle
-                    </Button>
-                    {p.label === "manual" && p.status === "pending" && (
-                      <Button size="small" variant="contained" onClick={() => handleSendProposal(p.id)}>
-                        Enviar
+              {filteredProposals.length > 0 ? (
+                filteredProposals.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell>{p.id}</TableCell>
+                    <TableCell>{p.job_title}</TableCell>
+                    <TableCell>{p.applicant_name}</TableCell>
+                    <TableCell>{p.label}</TableCell>
+                    <TableCell>{p.status}</TableCell>
+                    <TableCell>
+                      {new Intl.DateTimeFormat("es-AR", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      }).format(new Date(p.created_at))}
+                    </TableCell>
+                    <TableCell>
+                      <Button size="small" variant="outlined" onClick={() => handleOpenDetail(p)} sx={{ mr: 1 }}>
+                        Ver
                       </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredProposals.length === 0 && (
+                      {p.label === "manual" && p.status === "pending" && (
+                        <Button size="small" variant="contained" onClick={() => handleSendProposal(p.id)}>
+                          Enviar
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">No se encontraron propuestas.</TableCell>
+                  <TableCell colSpan={7} align="center">
+                    No se encontraron propuestas.
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-        </Paper>
+        </TableContainer>
       </Container>
 
+      {/* Detalle en diálogo */}
       <Dialog open={openDetailDialog} onClose={handleCloseDetail} fullWidth maxWidth="md">
         <DialogTitle>Detalle de la Propuesta</DialogTitle>
         <DialogContent dividers>
           {selectedProposal && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Typography><strong>ID:</strong> {selectedProposal.id}</Typography>
-              <Typography><strong>Oferta:</strong> {selectedProposal.job_title}</Typography>
-              <Typography>
-                <strong>Postulante:</strong> {selectedProposal.applicant_name} ({selectedProposal.applicant_email})
-              </Typography>
-              <Typography><strong>Etiqueta Oferta:</strong> {selectedProposal.job_label}</Typography>
-              <Typography><strong>Fuente:</strong> {selectedProposal.source}</Typography>
-              <Typography><strong>Estado:</strong> {selectedProposal.status}</Typography>
-              <Typography>
-                <strong>Creado el:</strong> {new Date(selectedProposal.created_at).toLocaleString()}
-              </Typography>
-              {selectedProposal.sent_at && (
-                <Typography>
-                  <strong>Enviado el:</strong> {new Date(selectedProposal.sent_at).toLocaleString()}
+              {Object.entries({
+                ID: selectedProposal.id,
+                Oferta: selectedProposal.job_title,
+                Postulante: `${selectedProposal.applicant_name} (${selectedProposal.applicant_email})`,
+                Etiqueta: selectedProposal.job_label,
+                Fuente: selectedProposal.source,
+                Estado: selectedProposal.status,
+                "Creado el": new Intl.DateTimeFormat("es-AR", {
+                  dateStyle: "full",
+                  timeStyle: "medium",
+                }).format(new Date(selectedProposal.created_at)),
+                ...(selectedProposal.sent_at && {
+                  "Enviado el": new Intl.DateTimeFormat("es-AR", {
+                    dateStyle: "full",
+                    timeStyle: "medium",
+                  }).format(new Date(selectedProposal.sent_at)),
+                }),
+                ...(selectedProposal.notes ? { Notas: selectedProposal.notes } : {}),
+              }).map(([label, value]) => (
+                <Typography key={label}>
+                  <strong>{label}:</strong> {value}
                 </Typography>
-              )}
-              {selectedProposal.notes && (
-                <Typography><strong>Notas:</strong> {selectedProposal.notes}</Typography>
-              )}
+              ))}
             </Box>
           )}
         </DialogContent>
@@ -186,13 +216,18 @@ export default function PropuestasPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert onClose={() => setSnackbar((s) => ({ ...s, open: false }))} severity={snackbar.severity} variant="filled">
+        <Alert
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
