@@ -44,7 +44,7 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
     const fetchProposals = async () => {
       setLoadingProposals(true);
       try {
-        const res = await fetch(`${API_URL}/api/proposals`, {
+        const res = await fetch(`${API_URL}/api/proposals/`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
           },
@@ -74,7 +74,7 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
 
   const handleSendProposal = async (proposalId) => {
     try {
-      const res = await fetch(`${API_URL}/api/proposals/${proposalId}/send`, {
+      const res = await fetch(`${API_URL}/api/proposals/${proposalId}/send/`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -102,7 +102,6 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
     setOpenDetailDialog(false);
   };
 
-  // llamados de carga
   if (loadingAuth || loadingProposals) {
     return (
       <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
@@ -179,7 +178,6 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
         </TableContainer>
       </Container>
 
-      {/* Detalle en diálogo */}
       <Dialog open={openDetailDialog} onClose={handleCloseDetail} fullWidth maxWidth="md">
         <DialogTitle>Detalle de la Propuesta</DialogTitle>
         <DialogContent dividers>
@@ -216,7 +214,6 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
