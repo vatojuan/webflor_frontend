@@ -18,27 +18,26 @@ import useAdminAuth from '../../hooks/useAdminAuth';
 
 export default function MatchinsPage({ toggleDarkMode, currentMode }) {
   const { user, loading: authLoading } = useAdminAuth();
-  const [data, setData] = useState([]);
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!authLoading && user) {
-      const fetchMatchings = async () => {
+      (async () => {
         try {
           const token = localStorage.getItem('adminToken');
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/api/admin/matchings`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const json = await res.json();
-          setData(json);
+          const data = await res.json();
+          setRows(data);
         } catch (e) {
           console.error(e);
         } finally {
           setLoading(false);
         }
-      };
-      fetchMatchings();
+      })();
     }
   }, [authLoading, user]);
 
@@ -66,7 +65,7 @@ export default function MatchinsPage({ toggleDarkMode, currentMode }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.map((row) => (
+                {rows.map(row => (
                   <TableRow key={row.id} hover>
                     <TableCell>{row.user_name}</TableCell>
                     <TableCell>{row.email}</TableCell>
