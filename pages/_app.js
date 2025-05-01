@@ -1,5 +1,5 @@
 // app/pages/_app.js
-import '@mui/x-data-grid/esm/index.css'; // Import global CSS for MUI DataGrid
+import '@mui/x-data-grid/DataGrid/DataGrid.css'; // Import global CSS for MUI DataGrid
 import { useState, useMemo, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
