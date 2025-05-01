@@ -1,42 +1,39 @@
 // pages/admin/matchins.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
-  Box,
+  Paper,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  TableContainer,
   CircularProgress,
-} from "@mui/material";
-import { DataGrid, GridToolbar } from "@mui/x-data-grid";
-import DashboardLayout from "../../components/DashboardLayout";
-import useAdminAuth from "../../hooks/useAdminAuth";
+  Box
+} from '@mui/material';
+import DashboardLayout from '../../components/DashboardLayout';
+import useAdminAuth from '../../hooks/useAdminAuth';
 
 export default function MatchinsPage({ toggleDarkMode, currentMode }) {
   const { user, loading: authLoading } = useAdminAuth();
-  const [rows, setRows] = useState([]);
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!authLoading && user) {
       const fetchMatchings = async () => {
-        const token = localStorage.getItem("adminToken");
         try {
+          const token = localStorage.getItem('adminToken');
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/api/admin/matchings`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          if (!res.ok) throw new Error("Error cargando matchings");
-          const data = await res.json();
-          setRows(
-            data.map((item) => ({
-              id: item.id,
-              candidate: item.user_name,
-              email: item.email,
-              offer: item.job_title,
-              score: Number(item.score.toFixed(3)),
-            }))
-          );
-        } catch (err) {
-          console.error(err);
+          const json = await res.json();
+          setData(json);
+        } catch (e) {
+          console.error(e);
         } finally {
           setLoading(false);
         }
@@ -45,87 +42,46 @@ export default function MatchinsPage({ toggleDarkMode, currentMode }) {
     }
   }, [authLoading, user]);
 
-  const columns = [
-    {
-      field: "candidate",
-      headerName: "Candidato",
-      flex: 1,
-      minWidth: 150,
-    },
-    {
-      field: "email",
-      headerName: "Email",
-      flex: 1,
-      minWidth: 200,
-    },
-    {
-      field: "offer",
-      headerName: "Oferta",
-      flex: 1.5,
-      minWidth: 200,
-    },
-    {
-      field: "score",
-      headerName: "Puntaje",
-      type: "number",
-      flex: 0.7,
-      minWidth: 120,
-      renderCell: (params) => (
-        <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ mr: 1 }}>
-            {params.value}
-          </Typography>
-          <Box
-            sx={{
-              flexGrow: 1,
-              height: 8,
-              backgroundColor: '#e0e0e0',
-              borderRadius: 4,
-              overflow: 'hidden',
-            }}
-          >
-            <Box
-              sx={{
-                width: `${params.value * 100}%`,
-                height: '100%',
-                backgroundColor:
-                  params.value > 0.8
-                    ? 'success.main'
-                    : params.value > 0.5
-                    ? 'warning.main'
-                    : 'error.main',
-              }}
-            />
-          </Box>
-        </Box>
-      ),
-    },
-  ];
-
   return (
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Typography variant="h4" gutterBottom>
           Matchings Profesionales
         </Typography>
+
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <Box sx={{ height: 600, width: '100%' }}>
-            <DataGrid
-              rows={rows}
-              columns={columns}
-              pageSize={10}
-              rowsPerPageOptions={[10, 25, 50]}
-              components={{ Toolbar: GridToolbar }}
-              sx={{
-                '& .MuiDataGrid-toolbarContainer': { mb: 1 },
-                '& .MuiDataGrid-row:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-              }}
-            />
-          </Box>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Candidato</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Oferta</TableCell>
+                  <TableCell align="right">Puntaje</TableCell>
+                  <TableCell>Fecha</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {data.map((row) => (
+                  <TableRow key={row.id} hover>
+                    <TableCell>{row.user_name}</TableCell>
+                    <TableCell>{row.email}</TableCell>
+                    <TableCell>{row.job_title}</TableCell>
+                    <TableCell align="right">
+                      {(row.score * 100).toFixed(1)}%
+                    </TableCell>
+                    <TableCell>
+                      {new Date(row.created_at).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
       </Container>
     </DashboardLayout>
