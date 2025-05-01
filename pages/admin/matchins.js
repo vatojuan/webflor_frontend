@@ -30,10 +30,11 @@ export default function MatchinsPage({ toggleDarkMode, currentMode }) {
             `${process.env.NEXT_PUBLIC_API_URL}/api/admin/matchings`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
+          if (!res.ok) throw new Error(await res.text());
           const data = await res.json();
           setRows(data);
         } catch (e) {
-          console.error(e);
+          console.error('Error cargando matchings:', e);
         } finally {
           setLoading(false);
         }
@@ -60,7 +61,7 @@ export default function MatchinsPage({ toggleDarkMode, currentMode }) {
                   <TableCell>Candidato</TableCell>
                   <TableCell>Email</TableCell>
                   <TableCell>Oferta</TableCell>
-                  <TableCell align="right">Puntaje</TableCell>
+                  <TableCell align="right">Puntaje (%)</TableCell>
                   <TableCell>Fecha</TableCell>
                 </TableRow>
               </TableHead>
@@ -71,7 +72,7 @@ export default function MatchinsPage({ toggleDarkMode, currentMode }) {
                     <TableCell>{row.email}</TableCell>
                     <TableCell>{row.job_title}</TableCell>
                     <TableCell align="right">
-                      {(row.score * 100).toFixed(1)}%
+                      {(row.score * 100).toFixed(1)}
                     </TableCell>
                     <TableCell>
                       {new Date(row.created_at).toLocaleString()}
@@ -86,4 +87,3 @@ export default function MatchinsPage({ toggleDarkMode, currentMode }) {
     </DashboardLayout>
   );
 }
- // cambio al pedo
