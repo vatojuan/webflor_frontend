@@ -22,7 +22,7 @@ import {
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
-export default function MisOfertas() {
+export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const { user, loading } = useAdminAuth();
   const [offers, setOffers] = useState([]);
   const [selectedOffer, setSelectedOffer] = useState(null);
@@ -31,21 +31,22 @@ export default function MisOfertas() {
 
   useEffect(() => {
     if (user) {
-      // Se asume que existe un endpoint que devuelve todas las ofertas para administradores
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/job/admin_offers`)
         .then((res) => res.json())
         .then((data) => {
-          // Se separan las ofertas del admin (aquellas cuyo userId coincide con el id del admin) y las demás
-          const adminOffers = data.offers.filter((offer) => offer.userId === user.id);
-          const otherOffers = data.offers.filter((offer) => offer.userId !== user.id);
-          // Se muestran primero las ofertas del administrador
+          // Filtrar ofertas expiradas
+          const validOffers = data.offers.filter(
+            (offer) => !offer.expirationDate || new Date(offer.expirationDate) >= Date.now()
+          );
+          // Separar ofertas del admin y de otros
+          const adminOffers = validOffers.filter((offer) => offer.userId === user.id);
+          const otherOffers = validOffers.filter((offer) => offer.userId !== user.id);
           setOffers([...adminOffers, ...otherOffers]);
         })
         .catch((err) => console.error("Error al obtener las ofertas:", err));
     }
   }, [user]);
 
-  // Al editar, se conserva el userId original de la oferta, sin modificarlo
   const handleEdit = (offer) => {
     setSelectedOffer(offer);
     setOpenEditDialog(true);
@@ -54,14 +55,17 @@ export default function MisOfertas() {
   const handleDelete = async (offerId) => {
     if (!window.confirm("¿Estás seguro de eliminar esta oferta?")) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/job/delete-admin`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: offerId })
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/job/delete-admin`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId: offerId })
+        }
+      );
       if (res.ok) {
         setSnackbar({ open: true, message: "Oferta eliminada", severity: "success" });
-        setOffers(offers.filter((o) => o.id !== offerId));
+        setOffers((prev) => prev.filter((o) => o.id !== offerId));
       } else {
         setSnackbar({ open: true, message: "Error al eliminar la oferta", severity: "error" });
       }
@@ -72,21 +76,22 @@ export default function MisOfertas() {
   };
 
   const handleEditChange = (field, value) => {
-    // Actualiza el campo sin modificar el userId existente
     setSelectedOffer({ ...selectedOffer, [field]: value });
   };
 
   const handleEditSubmit = async () => {
     try {
-      // En la edición, se mantiene el userId original de la oferta
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/job/update-admin`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(selectedOffer)
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/job/update-admin`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(selectedOffer)
+        }
+      );
       if (res.ok) {
         const updatedOffer = await res.json();
-        setOffers(offers.map((o) => (o.id === updatedOffer.id ? updatedOffer : o)));
+        setOffers((prev) => prev.map((o) => (o.id === updatedOffer.id ? updatedOffer : o)));
         setSnackbar({ open: true, message: "Oferta actualizada", severity: "success" });
         setOpenEditDialog(false);
       } else {
@@ -102,7 +107,7 @@ export default function MisOfertas() {
   if (!user) return null;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Container sx={{ mt: 4 }}>
         <Typography variant="h4" gutterBottom>
           Mis Ofertas de Trabajo
@@ -124,9 +129,7 @@ export default function MisOfertas() {
               {offers.map((offer) => (
                 <TableRow
                   key={offer.id}
-                  sx={{
-                    backgroundColor: offer.userId === user.id ? "#FFF9C4" : "inherit"
-                  }}
+                  sx={{ backgroundColor: offer.userId === user.id ? "#FFF9C4" : "inherit" }}
                 >
                   <TableCell>{offer.title}</TableCell>
                   <TableCell>{offer.description}</TableCell>
@@ -134,13 +137,35 @@ export default function MisOfertas() {
                   <TableCell>
                     {offer.expirationDate ? new Date(offer.expirationDate).toLocaleDateString() : "Sin expiración"}
                   </TableCell>
-                  <TableCell>{offer.label || "automatic"}</TableCell>
-                  <TableCell>{offer.source || "N/A"}</TableCell>
+                  <TableCell>{
+  // Mostrar etiqueta legible: 'Manual' o 'Automático'
+  offer.label 
+    ? (offer.label === 'manual' ? 'Manual' : 'Automático') 
+    : 'Manual'
+}</TableCell>”
+                  <TableCell>{
+  // Mostrar fuente: si no existe, inferir por userId
+  offer.source
+    ? (offer.source === 'employer' ? 'Empleador' 
+       : offer.source === 'admin' ? 'Administrador' 
+       : offer.source.charAt(0).toUpperCase() + offer.source.slice(1))
+    : (offer.userId === user.id ? 'Administrador' : 'Empleador')
+}</TableCell>
                   <TableCell>
-                    <Button onClick={() => handleEdit(offer)} variant="outlined" size="small" sx={{ mr: 1 }}>
+                    <Button
+                      onClick={() => handleEdit(offer)}
+                      variant="outlined"
+                      size="small"
+                      sx={{ mr: 1 }}
+                    >
                       Editar
                     </Button>
-                    <Button onClick={() => handleDelete(offer.id)} variant="outlined" size="small" color="error">
+                    <Button
+                      onClick={() => handleDelete(offer.id)}
+                      variant="outlined"
+                      size="small"
+                      color="error"
+                    >
                       Eliminar
                     </Button>
                   </TableCell>
@@ -150,8 +175,6 @@ export default function MisOfertas() {
           </Table>
         </TableContainer>
       </Container>
-      
-      {/* Diálogo para editar la oferta */}
       <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} fullWidth>
         <DialogTitle>Editar Oferta</DialogTitle>
         <DialogContent>
@@ -186,30 +209,24 @@ export default function MisOfertas() {
               value={selectedOffer?.expirationDate ? selectedOffer.expirationDate.split("T")[0] : ""}
               onChange={(e) => handleEditChange("expirationDate", e.target.value)}
             />
-            {/* Selector para modificar la etiqueta (label) */}
             <TextField
               select
               label="Etiqueta"
               fullWidth
               value={selectedOffer?.label || "automatic"}
               onChange={(e) => handleEditChange("label", e.target.value)}
-              SelectProps={{
-                native: true,
-              }}
+              SelectProps={{ native: true }}
             >
               <option value="automatic">Automático</option>
               <option value="manual">Manual</option>
             </TextField>
-            {/* Selector para modificar la fuente (source) */}
             <TextField
               select
               label="Fuente"
               fullWidth
               value={selectedOffer?.source || "admin"}
               onChange={(e) => handleEditChange("source", e.target.value)}
-              SelectProps={{
-                native: true,
-              }}
+              SelectProps={{ native: true }}
             >
               <option value="employer">Empleador</option>
               <option value="admin">Administrador</option>
@@ -224,14 +241,18 @@ export default function MisOfertas() {
           </Button>
         </DialogActions>
       </Dialog>
-      
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant="filled" sx={{ width: "100%" }}>
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
