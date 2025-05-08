@@ -1,5 +1,18 @@
+// hooks/useAdminAuth.js
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+
+// Helper para decodificar JWT sin dependencia externa
+function decodeJwt(token) {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
 
 export default function useAdminAuth() {
   const [user, setUser] = useState(null);
@@ -7,24 +20,25 @@ export default function useAdminAuth() {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("adminToken");
-      if (token) {
-        try {
-          // Se asume que el token es un JSON con la información del usuario
-          const parsedUser = JSON.parse(token);
-          setUser(parsedUser);
-        } catch (error) {
-          // Si el token no es un JSON, se puede asignar un objeto básico
-          setUser({ id: "admin123", email: token });
-        }
+    // Solo en cliente
+    if (typeof window === "undefined") return;
+
+    const token = localStorage.getItem("adminToken");
+    if (token) {
+      const payload = decodeJwt(token);
+      if (payload && payload.sub) {
+        // puedes extraer más campos si los incluyes en tu JWT
+        setUser({ id: payload.sub, ...payload });
+      } else {
+        // Token inválido — bórralo y redirige
+        localStorage.removeItem("adminToken");
       }
-      setLoading(false);
     }
+    setLoading(false);
   }, [router]);
 
   useEffect(() => {
-    // Solo redirigimos si ya se terminó de cargar y no hay usuario
+    // Cuando ya no estamos cargando y no hay usuario, vamos al login
     if (!loading && !user) {
       router.push("/admin/login");
     }
