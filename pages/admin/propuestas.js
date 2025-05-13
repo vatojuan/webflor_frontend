@@ -2,25 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Container,
-  Typography,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableContainer,
-  Paper,
-  Button,
-  TextField,
-  Snackbar,
-  Alert,
-  Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  CircularProgress,
+  Container, Typography,
+  Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
+  Paper, Button, TextField, Snackbar, Alert, Box,
+  Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress
 } from "@mui/material";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
@@ -29,71 +14,61 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
   const { user, loading: loadingAuth } = useAdminAuth();
   const [proposals, setProposals] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProposal, setSelectedProposal] = useState(null);
-  const [openDetailDialog, setOpenDetailDialog] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [openDetail, setOpenDetail] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [refresh, setRefresh] = useState(false);
-  const [loadingProposals, setLoadingProposals] = useState(false);
+  const [loadingList, setLoadingList] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
+  const API = process.env.NEXT_PUBLIC_API_URL;
   const token = typeof window !== "undefined" && localStorage.getItem("adminToken");
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-  // ─── Fetch propuestas ───────────────────────────────────────────
+  // ─── Cargar propuestas ─────────────────────────
   useEffect(() => {
     if (!user || !token) return;
-
-    const fetchProposals = async () => {
-      setLoadingProposals(true);
-      try {
-        const res = await fetch(`${API_URL}/api/proposals`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+    setLoadingList(true);
+    fetch(`${API}/api/proposals`, { headers })
+      .then(async res => {
         if (res.status === 401) throw new Error("No autorizado");
+        if (res.status === 404) throw new Error("Endpoint no encontrado");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setProposals(Array.isArray(data.proposals) ? data.proposals : []);
-      } catch (err) {
+        return res.json();
+      })
+      .then(data => setProposals(Array.isArray(data.proposals) ? data.proposals : []))
+      .catch(err => {
         console.error("Error al obtener propuestas:", err);
         setSnackbar({ open: true, message: err.message, severity: "error" });
-      } finally {
-        setLoadingProposals(false);
-      }
-    };
-
-    fetchProposals();
+      })
+      .finally(() => setLoadingList(false));
   }, [user, token, refresh]);
-
-  const handleSearchChange = (e) => setSearchQuery(e.target.value);
 
   const filtered = proposals.filter(p =>
     p.job_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.applicant_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // ─── Enviar propuesta ───────────────────────────────────────────
-  const handleSendProposal = async (id) => {
+  // ─── Enviar propuesta manual ────────────────────
+  const sendProposal = async id => {
     try {
-      const res = await fetch(`${API_URL}/api/proposals/${id}/send`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`${API}/api/proposals/${id}/send`, {
+        method: "PATCH",
+        headers
       });
+      if (res.status === 401) throw new Error("No autorizado");
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail || `HTTP ${res.status}`);
       }
       setSnackbar({ open: true, message: "Propuesta enviada", severity: "success" });
-      setRefresh(f => !f);
+      setRefresh(r => !r);
     } catch (err) {
       console.error("Error al enviar propuesta:", err);
       setSnackbar({ open: true, message: err.message, severity: "error" });
     }
   };
 
-  // ─── Ver detalle ────────────────────────────────────────────────
-  const openDetail = (p) => { setSelectedProposal(p); setOpenDetailDialog(true); };
-  const closeDetail = () => { setSelectedProposal(null); setOpenDetailDialog(false); };
-
-  if (loadingAuth || loadingProposals) {
+  if (loadingAuth || loadingList) {
     return (
       <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
         <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
@@ -108,16 +83,14 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Container sx={{ mt: 4 }}>
         <Typography variant="h4" gutterBottom>Propuestas</Typography>
-
-        <Box sx={{ mb: 2, display: "flex", gap: 1 }}>
+        <Box sx={{ mb: 2 }}>
           <TextField
             label="Buscar oferta o postulante"
             value={searchQuery}
-            onChange={handleSearchChange}
+            onChange={e => setSearchQuery(e.target.value)}
             fullWidth
           />
         </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -135,19 +108,17 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
                   <TableCell>{p.applicant_name}</TableCell>
                   <TableCell>{p.label === "manual" ? "Manual" : "Automático"}</TableCell>
                   <TableCell>{p.status}</TableCell>
-                  <TableCell>
-                    {new Intl.DateTimeFormat("es-AR", {
+                  <TableCell>{
+                    new Intl.DateTimeFormat("es-AR", {
                       dateStyle: "short", timeStyle: "short"
-                    }).format(new Date(p.created_at))}
-                  </TableCell>
+                    }).format(new Date(p.created_at))
+                  }</TableCell>
                   <TableCell>
-                    <Button size="small" onClick={() => openDetail(p)} sx={{ mr: 1 }}>
+                    <Button size="small" onClick={() => { setSelected(p); setOpenDetail(true); }} sx={{ mr: 1 }}>
                       Ver
                     </Button>
                     {p.label === "manual" && p.status === "pending" && (
-                      <Button size="small" variant="contained"
-                        onClick={() => handleSendProposal(p.id)}
-                      >
+                      <Button size="small" variant="contained" onClick={() => sendProposal(p.id)}>
                         Enviar
                       </Button>
                     )}
@@ -155,9 +126,7 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    No hay propuestas
-                  </TableCell>
+                  <TableCell colSpan={7} align="center">No hay propuestas</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -165,37 +134,34 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
         </TableContainer>
       </Container>
 
-      <Dialog open={openDetailDialog} onClose={closeDetail} fullWidth maxWidth="md">
+      {/* Detalle */}
+      <Dialog open={openDetail} onClose={() => setOpenDetail(false)} fullWidth maxWidth="md">
         <DialogTitle>Detalle de la Propuesta</DialogTitle>
         <DialogContent dividers>
-          {selectedProposal && (
+          {selected && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {[
-                ["ID", selectedProposal.id],
-                ["Oferta", selectedProposal.job_title],
-                ["Postulante", `${selectedProposal.applicant_name} (${selectedProposal.applicant_email})`],
-                ["Etiqueta", selectedProposal.label === "manual"? "Manual":"Automático"],
-                ["Fuente", selectedProposal.source],
-                ["Estado", selectedProposal.status],
+                ["ID", selected.id],
+                ["Oferta", selected.job_title],
+                ["Postulante", `${selected.applicant_name} (${selected.applicant_email})`],
+                ["Etiqueta", selected.label === "manual"? "Manual" : "Automático"],
+                ["Fuente", selected.proposal_source || selected.source],
+                ["Estado", selected.status],
                 ["Creado", new Intl.DateTimeFormat("es-AR", {
                   dateStyle:"full", timeStyle:"medium"
-                }).format(new Date(selectedProposal.created_at))],
-                selectedProposal.sent_at && [
-                  "Enviado", new Intl.DateTimeFormat("es-AR", {
-                    dateStyle:"full", timeStyle:"medium"
-                  }).format(new Date(selectedProposal.sent_at))
-                ],
-                selectedProposal.notes && ["Notas", selectedProposal.notes]
-              ].filter(Boolean).map(([label,val]) => (
-                <Typography key={label}>
-                  <strong>{label}:</strong> {val}
-                </Typography>
+                }).format(new Date(selected.created_at))],
+                selected.sent_at && ["Enviado", new Intl.DateTimeFormat("es-AR", {
+                  dateStyle:"full", timeStyle:"medium"
+                }).format(new Date(selected.sent_at))],
+                selected.notes && ["Notas", selected.notes]
+              ].filter(Boolean).map(([lbl, val]) => (
+                <Typography key={lbl}><strong>{lbl}:</strong> {val}</Typography>
               ))}
             </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDetail}>Cerrar</Button>
+          <Button onClick={() => setOpenDetail(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
@@ -205,9 +171,7 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
         onClose={() => setSnackbar(s => ({ ...s, open: false }))}
         anchorOrigin={{ vertical:"bottom", horizontal:"center" }}
       >
-        <Alert severity={snackbar.severity} variant="filled">
-          {snackbar.message}
-        </Alert>
+        <Alert severity={snackbar.severity} variant="filled">{snackbar.message}</Alert>
       </Snackbar>
     </DashboardLayout>
   );
