@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from "react";
 import {
-  Container,
-  Typography,
-  FormControlLabel,
-  Switch,
-  Button,
-  Paper,
-  Box,
-  Snackbar,
-  Alert
+  Container, Typography, FormControlLabel, Switch,
+  Button, Paper, Box, Snackbar, Alert
 } from "@mui/material";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
+
+const CONFIG_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/config/`;
 
 export default function Configuraciones({ toggleDarkMode, currentMode }) {
   const { user, loading } = useAdminAuth();
@@ -21,17 +16,15 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
-  // Carga la configuración al montar
+  /* ─────── GET config ─────── */
   useEffect(() => {
     if (!loading && user) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/config`, {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("adminToken")}`
-        }
+      fetch(CONFIG_URL, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
       })
-        .then(res => {
-          if (!res.ok) throw new Error("No autorizado");
-          return res.json();
+        .then(r => {
+          if (!r.ok) throw new Error(r.status);
+          return r.json();
         })
         .then(data => {
           setConfig({
@@ -39,47 +32,46 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
             show_expired_employer_offers: !!data.show_expired_employer_offers
           });
         })
-        .catch(err => {
-          console.error("Error cargando config:", err);
-          setSnackbar({ open: true, message: "Error cargando configuración", severity: "error" });
-        });
+        .catch(() =>
+          setSnackbar({ open: true, message: "Error cargando configuración", severity: "error" })
+        );
     }
   }, [loading, user]);
 
-  const handleToggle = (key) => {
-    setConfig(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  /* ─────── handlers ─────── */
+  const toggleKey = key => setConfig(p => ({ ...p, [key]: !p[key] }));
 
-  const handleSave = () => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/config`, {
+  const save = () => {
+    fetch(CONFIG_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("adminToken")}`
+        Authorization: `Bearer ${localStorage.getItem("adminToken")}`
       },
       body: JSON.stringify({ settings: config })
     })
-      .then(res => {
-        if (!res.ok) throw new Error();
-        setSnackbar({ open: true, message: "Guardado exitoso", severity: "success" });
+      .then(r => {
+        if (!r.ok) throw new Error();
+        setSnackbar({ open: true, message: "Guardado", severity: "success" });
       })
-      .catch(() => {
-        setSnackbar({ open: true, message: "Error al guardar configuración", severity: "error" });
-      });
+      .catch(() =>
+        setSnackbar({ open: true, message: "Error al guardar", severity: "error" })
+      );
   };
 
-  if (loading) return <Typography align="center" sx={{ mt: 4 }}>Cargando...</Typography>;
+  if (loading) return <Typography align="center" sx={{ mt: 4 }}>Cargando…</Typography>;
 
   return (
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Container sx={{ mt: 4 }}>
         <Typography variant="h4" gutterBottom>Configuraciones</Typography>
+
         <Paper sx={{ p: 3, mt: 2 }}>
           <FormControlLabel
             control={
               <Switch
                 checked={config.show_expired_admin_offers}
-                onChange={() => handleToggle("show_expired_admin_offers")}
+                onChange={() => toggleKey("show_expired_admin_offers")}
               />
             }
             label="Mostrar ofertas expiradas del administrador"
@@ -88,25 +80,25 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
             control={
               <Switch
                 checked={config.show_expired_employer_offers}
-                onChange={() => handleToggle("show_expired_employer_offers")}
+                onChange={() => toggleKey("show_expired_employer_offers")}
               />
             }
             label="Mostrar ofertas expiradas de empleadores"
           />
+
           <Box sx={{ mt: 2 }}>
-            <Button variant="contained" onClick={handleSave}>Guardar cambios</Button>
+            <Button variant="contained" onClick={save}>Guardar cambios</Button>
           </Box>
         </Paper>
       </Container>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
-          {snackbar.message}
-        </Alert>
+        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
       </Snackbar>
     </DashboardLayout>
   );
