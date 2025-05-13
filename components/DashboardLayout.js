@@ -123,7 +123,6 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
     { text: "Mis ofertas", icon: <ListAltIcon />, href: "/admin/mis_ofertas" },
     { text: "Matchins", icon: <CompareArrowsIcon />, href: "/admin/matchins" },
     { text: "Propuestas", icon: <AssignmentIcon />, href: "/admin/propuestas" },
-    { text: "Postear en blog", icon: <ArticleIcon />, href: "/admin/postear_blog" },
     { text: "Configuraciones", icon: <SettingsIcon />, href: "/admin/configuraciones" },
   ];
 
