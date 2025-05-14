@@ -18,8 +18,8 @@ import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import AssignmentIcon from "@mui/icons-material/Assignment";
-import ArticleIcon from "@mui/icons-material/Article";
 import SettingsIcon from "@mui/icons-material/Settings";
+import WidgetsIcon from "@mui/icons-material/Widgets";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
@@ -91,7 +91,7 @@ const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
 export default function DashboardLayout({ children, toggleDarkMode, currentMode }) {
   const theme = useTheme();
   const router = useRouter();
-  // Inicializa el estado leyendo localStorage; si no hay, se abre por defecto.
+
   const [open, setOpen] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("sidebarOpen");
@@ -100,21 +100,17 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
     return true;
   });
 
-  // Actualiza localStorage cada vez que cambia el estado
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("sidebarOpen", JSON.stringify(open));
     }
   }, [open]);
 
-  const handleDrawerToggle = () => {
-    setOpen((prev) => !prev);
-  };
+  const handleDrawerToggle = () => setOpen((prev) => !prev);
 
   const drawerBg = theme.palette.mode === "dark" ? "#4E342E" : theme.palette.primary.main;
   const appBarBg = theme.palette.mode === "dark" ? "#3E2723" : theme.palette.primary.dark;
 
-  // Items del menú
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, href: "/admin/dashboard" },
     { text: "Editar BD", icon: <EditIcon />, href: "/admin/editar_db" },
@@ -123,6 +119,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
     { text: "Mis ofertas", icon: <ListAltIcon />, href: "/admin/mis_ofertas" },
     { text: "Matchins", icon: <CompareArrowsIcon />, href: "/admin/matchins" },
     { text: "Propuestas", icon: <AssignmentIcon />, href: "/admin/propuestas" },
+    { text: "Plantillas", icon: <WidgetsIcon />, href: "/admin/templates" },  // New
     { text: "Configuraciones", icon: <SettingsIcon />, href: "/admin/configuraciones" },
   ];
 
@@ -134,7 +131,11 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
             <Link href="/" passHref>
               <a style={{ textDecoration: "none" }}>
                 <Image
-                  src={drawerBg === "#4E342E" ? "/images/Fap rrhh-marca-naranja(chico).png" : "/images/Fap rrhh-marca-blanca(chico).png"}
+                  src={
+                    drawerBg === "#4E342E"
+                      ? "/images/Fap rrhh-marca-naranja(chico).png"
+                      : "/images/Fap rrhh-marca-blanca(chico).png"
+                  }
                   alt="Logo"
                   width={200}
                   height={90}
@@ -184,6 +185,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
           })}
         </List>
       </Drawer>
+
       <Main open={open}>
         <AppBar position="static" sx={{ backgroundColor: appBarBg }}>
           <Toolbar>
@@ -191,7 +193,11 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
               <Link href="/" passHref>
                 <a style={{ textDecoration: "none" }}>
                   <Image
-                    src={theme.palette.mode === "dark" ? "/images/Fap-marca-naranja(chico).png" : "/images/Fap-marca-blanca(chico).png"}
+                    src={
+                      theme.palette.mode === "dark"
+                        ? "/images/Fap-marca-naranja(chico).png"
+                        : "/images/Fap-marca-blanca(chico).png"
+                    }
                     alt="Logo AppBar"
                     width={100}
                     height={50}
@@ -201,11 +207,9 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
               </Link>
             )}
             <Box sx={{ flexGrow: 1 }} />
-            {/* Botón de notificaciones */}
             <IconButton sx={{ color: "#fff", mr: 2 }}>
               <NotificationsIcon />
             </IconButton>
-            {/* Interruptor de modo oscuro */}
             <IconButton onClick={toggleDarkMode ? toggleDarkMode : () => {}} sx={{ color: "#fff" }}>
               {theme.palette.mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
@@ -213,7 +217,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
         </AppBar>
         <Box sx={{ p: 3, flexGrow: 1 }}>{children}</Box>
       </Main>
-      {/* Global override to remove underline from all anchors */}
+
       <style jsx global>{`
         a {
           text-decoration: none !important;
