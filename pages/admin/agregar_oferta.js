@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+// pages/admin/agregar_oferta.js
+
+import { useState } from "react";
 import { useRouter } from "next/router";
 import { 
   Box, 
@@ -21,8 +23,6 @@ import useAdminAuth from "../../hooks/useAdminAuth";
 export default function AgregarOferta() {
   const { user, loading } = useAdminAuth();
   const router = useRouter();
-
-  // Si prefieres tomar el adminId del token:
   const adminUserId = user?.id || 1;
 
   const [title, setTitle] = useState("");
@@ -35,7 +35,6 @@ export default function AgregarOferta() {
   const [source, setSource] = useState("admin");
   const [isPaid, setIsPaid] = useState(false);
 
-  // ✨ nuevos campos de contacto ✨
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
 
@@ -84,19 +83,19 @@ export default function AgregarOferta() {
           label: finalLabel,
           source,
           isPaid,
-          // ✉️ enviamos también los contactos
           contactEmail,
           contactPhone,
         }),
       });
+
       if (res.ok) {
         setSnackbar({ open: true, message: "Oferta publicada", severity: "success" });
         setTimeout(() => router.push("/admin/mis_ofertas"), 2000);
       } else {
         const data = await res.json();
-        setSnackbar({ open: true, message: "Error: " + (data.detail||data.message), severity: "error" });
+        setSnackbar({ open: true, message: "Error: " + (data.detail || data.message), severity: "error" });
       }
-    } catch (error) {
+    } catch {
       setSnackbar({ open: true, message: "Error al publicar oferta", severity: "error" });
     }
   };
@@ -106,15 +105,13 @@ export default function AgregarOferta() {
       <Container maxWidth="sm" sx={{ textAlign: "center", mt: 4 }}>
         <Typography variant="h4" gutterBottom>Publicar Oferta de Empleo</Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {/* ...tus campos existentes... */}
-          <TextField label="Título" value={title} onChange={e=>setTitle(e.target.value)} required fullWidth />
-          <TextField label="Descripción" value={description} onChange={e=>setDescription(e.target.value)} required multiline rows={4} fullWidth />
-          <TextField label="Requisitos" value={requirements} onChange={e=>setRequirements(e.target.value)} required multiline rows={3} fullWidth />
-          
-          {/* Expiración */}
+          <TextField label="Título" value={title} onChange={e => setTitle(e.target.value)} required fullWidth />
+          <TextField label="Descripción" value={description} onChange={e => setDescription(e.target.value)} required multiline rows={4} fullWidth />
+          <TextField label="Requisitos" value={requirements} onChange={e => setRequirements(e.target.value)} required multiline rows={3} fullWidth />
+
           <FormControl fullWidth>
             <InputLabel id="expiration-option-label">Expiración</InputLabel>
-            <Select labelId="expiration-option-label" label="Expiración" value={expirationOption} onChange={e=>setExpirationOption(e.target.value)}>
+            <Select labelId="expiration-option-label" label="Expiración" value={expirationOption} onChange={e => setExpirationOption(e.target.value)}>
               <MenuItem value="24h">24 horas</MenuItem>
               <MenuItem value="3d">3 días</MenuItem>
               <MenuItem value="7d">7 días</MenuItem>
@@ -123,69 +120,66 @@ export default function AgregarOferta() {
               <MenuItem value="manual">Fecha manual</MenuItem>
             </Select>
           </FormControl>
-          {expirationOption==="manual" && (
+          {expirationOption === "manual" && (
             <TextField
               label="Fecha de Expiración"
               type="date"
               value={manualExpirationDate}
-              onChange={e=>setManualExpirationDate(e.target.value)}
-              InputLabelProps={{ shrink:true }}
+              onChange={e => setManualExpirationDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
               fullWidth
             />
           )}
 
-          {/* Etiqueta & Fuente */}
           <FormControl fullWidth>
             <InputLabel id="label-option-label">Etiqueta</InputLabel>
-            <Select labelId="label-option-label" label="Etiqueta" value={label} onChange={e=>setLabel(e.target.value)} disabled={isPaid}>
+            <Select labelId="label-option-label" label="Etiqueta" value={label} onChange={e => setLabel(e.target.value)} disabled={isPaid}>
               <MenuItem value="automatic">Automático</MenuItem>
               <MenuItem value="manual">Manual</MenuItem>
             </Select>
           </FormControl>
+
           <FormControl fullWidth>
             <InputLabel id="source-option-label">Fuente</InputLabel>
-            <Select labelId="source-option-label" label="Fuente" value={source} onChange={e=>setSource(e.target.value)}>
+            <Select labelId="source-option-label" label="Fuente" value={source} onChange={e => setSource(e.target.value)}>
               <MenuItem value="employer">Empleador</MenuItem>
               <MenuItem value="admin">Administrador</MenuItem>
               <MenuItem value="red_social">Red Social</MenuItem>
             </Select>
           </FormControl>
 
-          {/* — Nuevos: datos de contacto — */}
           <TextField
             label="Email de Contacto (opcional)"
-            value={contactEmail}
-            onChange={e=>setContactEmail(e.target.value)}
             type="email"
+            value={contactEmail}
+            onChange={e => setContactEmail(e.target.value)}
             fullWidth
           />
           <TextField
             label="Teléfono de Contacto (opcional)"
             value={contactPhone}
-            onChange={e=>setContactPhone(e.target.value)}
+            onChange={e => setContactPhone(e.target.value)}
             fullWidth
           />
 
-          {/* Oferta pagada */}
           <FormControlLabel
-            control={
-              <Checkbox checked={isPaid} onChange={e=>setIsPaid(e.target.checked)} color="primary" />
-            }
+            control={<Checkbox checked={isPaid} onChange={e => setIsPaid(e.target.checked)} color="primary" />}
             label="Oferta pagada (posicionamiento y asesoría)"
           />
 
-          {/* Botones */}
-          <Box sx={{ display:"flex", justifyContent:"space-between", mt:2 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
             <Button type="submit" variant="contained" color="primary">Publicar Oferta</Button>
-            <Button variant="outlined" onClick={()=>router.push("/admin/dashboard")}>Cancelar</Button>
+            <Button variant="outlined" onClick={() => router.push("/admin/dashboard")}>Cancelar</Button>
           </Box>
         </Box>
 
-        {/* Snackbar */}
-        <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={()=>setSnackbar(s=>({...s,open:false}))}
-          anchorOrigin={{vertical:"bottom",horizontal:"center"}}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
-          <Alert onClose={()=>setSnackbar(s=>({...s,open:false}))} severity={snackbar.severity} variant="filled">
+          <Alert severity={snackbar.severity} variant="filled">
             {snackbar.message}
           </Alert>
         </Snackbar>
@@ -194,7 +188,7 @@ export default function AgregarOferta() {
   );
 }
 
-// SSR
+// Forzar SSR
 export async function getServerSideProps() {
-  return { props:{} };
+  return { props: {} };
 }
