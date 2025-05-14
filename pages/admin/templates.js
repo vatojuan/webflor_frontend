@@ -26,6 +26,8 @@ import {
   Alert,
   Chip,
   Stack,
+  Checkbox,
+  FormControlLabel
 } from "@mui/material";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
@@ -38,7 +40,7 @@ const PLACEHOLDERS = [
   { label: "Empleador",  code: "{{employer_name}}" },
   { label: "Email CV",   code: "{{cv_url}}" },
   { label: "Fecha",      code: "{{created_at}}" },
-  // añade más según necesites...
+  // ...añade los que necesites
 ];
 
 export default function TemplatesPage({ toggleDarkMode, currentMode }) {
@@ -47,10 +49,13 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
   const [openDialog, setOpenDialog] = useState(false);
   const [editing, setEditing] = useState(null);
   const [snackbar, setSnackbar] = useState({ open:false, message:"", severity:"success" });
-  const nameRef        = useRef();
-  const contentRef     = useRef();
-  const typeRef        = useRef();
 
+  const nameRef    = useRef();
+  const typeRef    = useRef();
+  const contentRef = useRef();
+  const defaultRef = useRef();
+
+  // Trae todas las plantillas
   const fetchTemplates = async () => {
     try {
       const res = await fetch(`${API}/api/admin/templates`, {
@@ -68,36 +73,54 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
     if (!loading && user) fetchTemplates();
   }, [loading, user]);
 
+  // Abre diálogo para nueva plantilla
   const handleOpenNew = () => {
     setEditing(null);
     setOpenDialog(true);
     setTimeout(() => {
       nameRef.current.value = "";
-      contentRef.current.value = "";
       typeRef.current.value = "automatic";
+      contentRef.current.value = "";
+      defaultRef.current.checked = false;
     }, 0);
   };
 
+  // Abre diálogo para editar
   const handleOpenEdit = tpl => {
     setEditing(tpl);
     setOpenDialog(true);
     setTimeout(() => {
-      nameRef.current.value = tpl.name;
+      nameRef.current.value    = tpl.name;
+      typeRef.current.value    = tpl.type;
       contentRef.current.value = tpl.content;
-      typeRef.current.value = tpl.type;
+      defaultRef.current.checked = tpl.isDefault;
     }, 0);
   };
 
+  // Inserta placeholder en el textarea
+  const insertPlaceholder = code => {
+    const ta = contentRef.current;
+    const pos = ta.selectionStart;
+    const before = ta.value.slice(0,pos);
+    const after  = ta.value.slice(pos);
+    ta.value = before + code + after;
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = pos + code.length;
+  };
+
+  // Guarda (POST o PUT)
   const handleSave = async () => {
     const payload = {
-      name: nameRef.current.value.trim(),
+      name:    nameRef.current.value.trim(),
       content: contentRef.current.value,
-      type: typeRef.current.value,
+      type:    typeRef.current.value,
+      isDefault: defaultRef.current.checked
     };
     const url = editing
       ? `${API}/api/admin/templates/${editing.id}`
       : `${API}/api/admin/templates`;
     const method = editing ? "PUT" : "POST";
+
     try {
       const res = await fetch(url, {
         method,
@@ -116,8 +139,9 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
     }
   };
 
+  // Borra plantilla
   const handleDelete = async tpl => {
-    if (!confirm("Eliminar plantilla “" + tpl.name + "”?")) return;
+    if (!confirm(`Eliminar plantilla “${tpl.name}”?`)) return;
     try {
       const res = await fetch(`${API}/api/admin/templates/${tpl.id}`, {
         method:"DELETE",
@@ -131,35 +155,56 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
     }
   };
 
-  const insertPlaceholder = code => {
-    const textarea = contentRef.current;
-    const pos = textarea.selectionStart;
-    const before = textarea.value.slice(0,pos);
-    const after  = textarea.value.slice(pos);
-    textarea.value = before + code + after;
-    textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = pos + code.length;
+  // Marca plantilla como predeterminada
+  const handleSetDefault = async tpl => {
+    try {
+      const res = await fetch(`${API}/api/admin/templates/${tpl.id}/default`, {
+        method: "PUT",
+        headers:{ Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
+      });
+      if (!res.ok) throw new Error();
+      setSnackbar({ open:true, message:"Predeterminada actualizada", severity:"success" });
+      fetchTemplates();
+    } catch {
+      setSnackbar({ open:true, message:"Error al actualizar predeterminada", severity:"error" });
+    }
   };
 
   if (loading || !user) return null;
+
   return (
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Container sx={{ mt:4 }}>
         <Typography variant="h4" gutterBottom>Plantillas de Propuesta</Typography>
-        <Button variant="contained" onClick={handleOpenNew} sx={{ mb:2 }}>Nueva Plantilla</Button>
+        <Button variant="contained" onClick={handleOpenNew} sx={{ mb:2 }}>
+          Nueva Plantilla
+        </Button>
 
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
-                {["Nombre","Tipo","Acciones"].map(h=><TableCell key={h}>{h}</TableCell>)}
+                <TableCell>Nombre</TableCell>
+                <TableCell>Tipo</TableCell>
+                <TableCell>Predet.</TableCell>
+                <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {templates.map(tpl=>(
                 <TableRow key={tpl.id}>
                   <TableCell>{tpl.name}</TableCell>
-                  <TableCell>{tpl.type === "automatic" ? "Automática" : "Manual"}</TableCell>
+                  <TableCell>
+                    {tpl.type==="automatic"?"Automática":"Manual"}
+                  </TableCell>
+                  <TableCell>
+                    {tpl.isDefault
+                      ? "⭐"
+                      : <Button size="small" onClick={()=>handleSetDefault(tpl)}>
+                          Marcar
+                        </Button>
+                    }
+                  </TableCell>
                   <TableCell>
                     <Button size="small" onClick={()=>handleOpenEdit(tpl)}>Editar</Button>
                     <Button size="small" color="error" onClick={()=>handleDelete(tpl)}>Borrar</Button>
@@ -168,7 +213,7 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
               ))}
               {templates.length===0 && (
                 <TableRow>
-                  <TableCell colSpan={3} align="center">No hay plantillas</TableCell>
+                  <TableCell colSpan={4} align="center">No hay plantillas</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -176,8 +221,9 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
         </TableContainer>
       </Container>
 
+      {/* Diálogo de creación/edición */}
       <Dialog open={openDialog} onClose={()=>setOpenDialog(false)} fullWidth maxWidth="md">
-        <DialogTitle>{editing ? "Editar" : "Nueva"} Plantilla</DialogTitle>
+        <DialogTitle>{editing?"Editar":"Nueva"} Plantilla</DialogTitle>
         <DialogContent>
           <Box sx={{ display:"flex", flexDirection:"column", gap:2, mt:1 }}>
             <TextField label="Nombre" inputRef={nameRef} fullWidth />
@@ -188,6 +234,10 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
                 <MenuItem value="manual">Manual</MenuItem>
               </Select>
             </FormControl>
+            <FormControlLabel
+              control={<Checkbox inputRef={defaultRef} />}
+              label="Predeterminada"
+            />
             <Box>
               <Typography variant="subtitle2">Insertar variable:</Typography>
               <Stack direction="row" spacing={1} sx={{ flexWrap:"wrap" }}>
@@ -212,7 +262,9 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
         </DialogContent>
         <DialogActions>
           <Button onClick={()=>setOpenDialog(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave}>{editing ? "Guardar" : "Crear"}</Button>
+          <Button variant="contained" onClick={handleSave}>
+            {editing?"Guardar":"Crear"}
+          </Button>
         </DialogActions>
       </Dialog>
 
