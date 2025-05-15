@@ -42,12 +42,22 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
+  // Helper para formatear fecha en zona Argentina
+  const formatAR = isoStr => {
+    if (!isoStr) return "";
+    return new Intl.DateTimeFormat("es-AR", {
+      dateStyle: "short",
+      timeStyle: "short",
+      timeZone: "America/Argentina/Buenos_Aires",
+    }).format(new Date(isoStr));
+  };
+
   // ─── Fetch propuestas ─────────────────────────
   useEffect(() => {
     if (!user || !token) return;
     setLoadingProposals(true);
 
-    fetch(`${API_URL}/api/proposals/`, { headers })  // ¡Nótese la barra final!
+    fetch(`${API_URL}/api/proposals/`, { headers })
       .then(async res => {
         if (res.status === 401) throw new Error("No autorizado");
         if (res.status === 404) throw new Error("Endpoint no encontrado");
@@ -74,7 +84,7 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
   const handleSendProposal = async id => {
     try {
       const res = await fetch(`${API_URL}/api/proposals/${id}/send`, {
-        method: "PATCH", 
+        method: "PATCH",
         headers,
       });
       if (res.status === 401) throw new Error("No autorizado");
@@ -143,12 +153,7 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
                     <TableCell>{p.applicant_name}</TableCell>
                     <TableCell>{p.label === "manual" ? "Manual" : "Automático"}</TableCell>
                     <TableCell>{p.status}</TableCell>
-                    <TableCell>
-                      {new Intl.DateTimeFormat("es-AR", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      }).format(new Date(p.created_at))}
-                    </TableCell>
+                    <TableCell>{formatAR(p.created_at)}</TableCell>
                     <TableCell>
                       <Button size="small" onClick={() => openDetail(p)} sx={{ mr: 1 }}>
                         Ver
@@ -167,9 +172,7 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    No hay propuestas
-                  </TableCell>
+                  <TableCell colSpan={7} align="center">No hay propuestas</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -190,16 +193,8 @@ export default function PropuestasPage({ toggleDarkMode, currentMode }) {
                 ["Etiqueta", selectedProposal.label === "manual" ? "Manual" : "Automático"],
                 ["Fuente", selectedProposal.proposal_source || selectedProposal.source],
                 ["Estado", selectedProposal.status],
-                ["Creado", new Intl.DateTimeFormat("es-AR", {
-                  dateStyle: "full",
-                  timeStyle: "medium",
-                }).format(new Date(selectedProposal.created_at))],
-                selectedProposal.sent_at && [
-                  "Enviado", new Intl.DateTimeFormat("es-AR", {
-                    dateStyle: "full",
-                    timeStyle: "medium",
-                  }).format(new Date(selectedProposal.sent_at))
-                ],
+                ["Creado", formatAR(selectedProposal.created_at)],
+                selectedProposal.sent_at && ["Enviado", formatAR(selectedProposal.sent_at)],
                 selectedProposal.notes && ["Notas", selectedProposal.notes]
               ]
                 .filter(Boolean)
