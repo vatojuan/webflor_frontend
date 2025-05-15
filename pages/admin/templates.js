@@ -1,5 +1,3 @@
-// pages/admin/templates.js
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   Container,
@@ -52,6 +50,7 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
 
   const nameRef    = useRef();
   const typeRef    = useRef();
+  const subjectRef = useRef();   // 🆕
   const contentRef = useRef();
   const defaultRef = useRef();
 
@@ -78,8 +77,9 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
     setEditing(null);
     setOpenDialog(true);
     setTimeout(() => {
-      nameRef.current.value = "";
-      typeRef.current.value = "automatic";
+      nameRef.current.value    = "";
+      typeRef.current.value    = "automatic";
+      subjectRef.current.value = "";
       contentRef.current.value = "";
       defaultRef.current.checked = false;
     }, 0);
@@ -92,8 +92,9 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
     setTimeout(() => {
       nameRef.current.value    = tpl.name;
       typeRef.current.value    = tpl.type;
-      contentRef.current.value = tpl.content;
-      defaultRef.current.checked = tpl.isDefault;
+      subjectRef.current.value = tpl.subject;    // 🆕
+      contentRef.current.value = tpl.body;       // ahora body
+      defaultRef.current.checked = tpl.is_default;
     }, 0);
   };
 
@@ -111,12 +112,13 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
   // Guarda (POST o PUT)
   const handleSave = async () => {
     const payload = {
-      name:    nameRef.current.value.trim(),
-      content: contentRef.current.value,
-      type:    typeRef.current.value,
-      isDefault: defaultRef.current.checked
+      name:      nameRef.current.value.trim(),
+      type:      typeRef.current.value,
+      subject:   subjectRef.current.value.trim(),  // 🆕
+      body:      contentRef.current.value,         // antes `content`
+      is_default: defaultRef.current.checked
     };
-    const url = editing
+    const url    = editing
       ? `${API}/api/admin/templates/${editing.id}`
       : `${API}/api/admin/templates`;
     const method = editing ? "PUT" : "POST";
@@ -158,8 +160,8 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
   // Marca plantilla como predeterminada
   const handleSetDefault = async tpl => {
     try {
-      const res = await fetch(`${API}/api/admin/templates/${tpl.id}/default`, {
-        method: "PUT",
+      const res = await fetch(`${API}/api/admin/templates/${tpl.id}/set-default`, {
+        method: "POST",
         headers:{ Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
       });
       if (!res.ok) throw new Error();
@@ -194,11 +196,9 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
               {templates.map(tpl=>(
                 <TableRow key={tpl.id}>
                   <TableCell>{tpl.name}</TableCell>
+                  <TableCell>{tpl.type==="automatic"?"Automática":"Manual"}</TableCell>
                   <TableCell>
-                    {tpl.type==="automatic"?"Automática":"Manual"}
-                  </TableCell>
-                  <TableCell>
-                    {tpl.isDefault
+                    {tpl.is_default
                       ? "⭐"
                       : <Button size="small" onClick={()=>handleSetDefault(tpl)}>
                           Marcar
@@ -234,6 +234,11 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
                 <MenuItem value="manual">Manual</MenuItem>
               </Select>
             </FormControl>
+            <TextField
+              label="Asunto (subject)"
+              inputRef={subjectRef}
+              fullWidth
+            />
             <FormControlLabel
               control={<Checkbox inputRef={defaultRef} />}
               label="Predeterminada"
@@ -252,7 +257,7 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
               </Stack>
             </Box>
             <TextField
-              label="Contenido"
+              label="Cuerpo (body)"
               inputRef={contentRef}
               multiline rows={8}
               fullWidth
