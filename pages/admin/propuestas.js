@@ -1,149 +1,287 @@
 // pages/admin/propuestas.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  Container, Typography, Table, TableHead, TableBody, TableRow, TableCell,
-  TableContainer, Paper, Button, TextField, Snackbar, Alert, Box,
-  Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress
+  Container,
+  Typography,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableContainer,
+  Paper,
+  Button,
+  TextField,
+  Snackbar,
+  Alert,
+  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Chip,
 } from "@mui/material";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
+/* ══════════════════════════════════════
+   Utils
+   ══════════════════════════════════════ */
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
+
+const formatAR = (iso) =>
+  iso
+    ? new Intl.DateTimeFormat("es-AR", {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "America/Argentina/Buenos_Aires",
+      }).format(new Date(iso))
+    : "";
+
+/* ══════════════════════════════════════
+   Page Component
+   ══════════════════════════════════════ */
 export default function PropuestasPage({ toggleDarkMode, currentMode }) {
-  /* ───── estados ───── */
   const { user, loading: loadingAuth } = useAdminAuth();
-  const [proposals, setProposals] = useState([]);
-  const [search, setSearch]       = useState("");
-  const [detail, setDetail]       = useState(null);
-  const [snack , setSnack]        = useState({open:false,msg:"",sev:"success"});
-  const [fetching, setFetching]   = useState(false);
-  const [refresh , setRefresh]    = useState(false);
 
-  /* ───── config API ───── */
-  const API = process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
-  const token = typeof window !== "undefined" && localStorage.getItem("adminToken");
-  const headers = { "Content-Type":"application/json", ...(token && {Authorization:`Bearer ${token}`}) };
+  const [data, setData] = useState([]);           // propuestas crudas
+  const [loading, setLoading] = useState(false);  // loading de fetch
+  const [q, setQ] = useState("");                 // búsqueda
+  const [sel, setSel] = useState(null);           // propuesta seleccionada (detalle)
+  const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
+  const [refreshFlag, setRefreshFlag] = useState(false);
 
-  /* ───── helper fecha AR ───── */
-  const fmtAR = iso => iso
-    ? new Intl.DateTimeFormat("es-AR",{dateStyle:"short",timeStyle:"short",timeZone:"America/Argentina/Buenos_Aires"}).format(new Date(iso))
-    : "—";
+  /* ————————————————————————————————————
+     Credenciales
+     ———————————————————————————————————— */
+  const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 
-  /* ───── fetch inicial / refresh ───── */
+  /* ————————————————————————————————————
+     Fetch
+     ———————————————————————————————————— */
   useEffect(() => {
     if (!user || !token) return;
-    setFetching(true);
-    fetch(`${API}/api/proposals/`,{headers})
-      .then(r=>r.ok?r.json():Promise.reject(r.statusText))
-      .then(d=>setProposals(Array.isArray(d.proposals)?d.proposals:[]))
-      .catch(e=>setSnack({open:true,msg:`Error: ${e}`,sev:"error"}))
-      .finally(()=>setFetching(false));
-  },[user,token,refresh]);
+    setLoading(true);
 
-  /* ───── envío manual ───── */
-  const sendManual = async id => {
-    try{
-      const r = await fetch(`${API}/api/proposals/${id}/send`,{method:"PATCH",headers});
-      if(!r.ok) throw new Error((await r.json()).detail||r.status);
-      setSnack({open:true,msg:"Propuesta enviada",sev:"success"});
-      setRefresh(r=>!r);
-    }catch(e){
-      setSnack({open:true,msg:`Error: ${e.message}`,sev:"error"});
+    fetch(`${API_URL}/api/proposals/`, { headers })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((json) => setData(Array.isArray(json.proposals) ? json.proposals : []))
+      .catch((err) => {
+        console.error("Fetch propuestas:", err);
+        setSnack({ open: true, msg: err.message, sev: "error" });
+      })
+      .finally(() => setLoading(false));
+  }, [user, token, refreshFlag]);
+
+  /* ————————————————————————————————————
+     Filtro con memo (evita crash por undefined)
+     ———————————————————————————————————— */
+  const proposals = useMemo(() => {
+    const txt = q.trim().toLowerCase();
+    if (!txt) return data;
+    return data.filter((p) => {
+      const jt = (p.job_title ?? "").toLowerCase();
+      const an = (p.applicant_name ?? "").toLowerCase();
+      return jt.includes(txt) || an.includes(txt);
+    });
+  }, [q, data]);
+
+  /* ————————————————————————————————————
+     Acciones
+     ———————————————————————————————————— */
+  const handleSend = async (id) => {
+    try {
+      const r = await fetch(`${API_URL}/api/proposals/${id}/send`, { method: "PATCH", headers });
+      if (!r.ok) throw new Error((await r.json()).detail ?? `HTTP ${r.status}`);
+      setSnack({ open: true, msg: "Propuesta enviada", sev: "success" });
+      setRefreshFlag((f) => !f);
+    } catch (e) {
+      setSnack({ open: true, msg: e.message, sev: "error" });
     }
   };
 
-  /* ───── filtro seguro ───── */
-  const safe = s => (s ?? "").toString().toLowerCase();
-  const filtered = proposals.filter(p =>
-    safe(p.job_title).includes(safe(search)) ||
-    safe(p.applicant_name).includes(safe(search))
-  );
+  const handleDeleteCancelled = async (id) => {
+    if (!confirm("¿Eliminar propuesta cancelada definitivamente?")) return;
+    try {
+      const r = await fetch(`${API_URL}/api/proposals/${id}`, { method: "DELETE", headers });
+      if (!r.ok) throw new Error((await r.json()).detail ?? `HTTP ${r.status}`);
+      setSnack({ open: true, msg: "Propuesta eliminada", sev: "success" });
+      setRefreshFlag((f) => !f);
+    } catch (e) {
+      setSnack({ open: true, msg: e.message, sev: "error" });
+    }
+  };
 
-  /* ───── UI carga ───── */
-  if (loadingAuth || fetching) {
+  /* ————————————————————————————————————
+     Render
+     ———————————————————————————————————— */
+  if (loadingAuth || loading) {
     return (
       <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
-        <Box sx={{display:"flex",justifyContent:"center",mt:8}}><CircularProgress/></Box>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
+          <CircularProgress />
+        </Box>
       </DashboardLayout>
     );
   }
-  if (!user) return null;
+  if (!user || !token) return null;
 
-  /* ───── componente ───── */
   return (
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
-      <Container sx={{mt:4}}>
-        <Typography variant="h4" gutterBottom>Propuestas</Typography>
+      <Container sx={{ mt: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Propuestas
+        </Typography>
 
         <TextField
-          fullWidth label="Buscar oferta o postulante"
-          value={search} onChange={e=>setSearch(e.target.value)}
-          sx={{mb:2}}
+          fullWidth
+          label="Buscar oferta o postulante"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          sx={{ mb: 2 }}
         />
 
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
               <TableRow>
-                {["ID","Oferta","Postulante","Etiqueta","Estado","Creado","Acciones"]
-                 .map(h=> <TableCell key={h}>{h}</TableCell>)}
+                {["ID", "Oferta", "Postulante", "Etiqueta", "Estado", "Creado", "Acciones"].map(
+                  (h) => (
+                    <TableCell key={h}>{h}</TableCell>
+                  )
+                )}
               </TableRow>
             </TableHead>
             <TableBody>
-              {filtered.length
-               ? filtered.map(p=>(
+              {proposals.length ? (
+                proposals.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell>{p.id}</TableCell>
-                    <TableCell>{p.job_title ?? "—"}</TableCell>
-                    <TableCell>{p.applicant_name ?? "—"}</TableCell>
-                    <TableCell>{p.label==="manual"?"Manual":"Automático"}</TableCell>
-                    <TableCell>{p.status}</TableCell>
-                    <TableCell>{fmtAR(p.created_at)}</TableCell>
+                    <TableCell>{p.job_title}</TableCell>
+                    <TableCell>{p.applicant_name}</TableCell>
+                    <TableCell>{p.label === "manual" ? "Manual" : "Automático"}</TableCell>
                     <TableCell>
-                      <Button size="small" onClick={()=>setDetail(p)} sx={{mr:1}}>Ver</Button>
-                      {p.label==="manual" && p.status==="pending" &&
-                        <Button size="small" variant="contained" onClick={()=>sendManual(p.id)}>
+                      <Chip
+                        label={p.status}
+                        size="small"
+                        color={
+                          p.status === "sent"
+                            ? "success"
+                            : p.status === "cancelled"
+                            ? "warning"
+                            : "default"
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>{formatAR(p.created_at)}</TableCell>
+                    <TableCell>
+                      <Button size="small" onClick={() => (setSel(p), setOpen(true))}>
+                        Ver
+                      </Button>
+                      {p.label === "manual" && p.status === "pending" && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => handleSend(p.id)}
+                          sx={{ ml: 1 }}
+                        >
                           Enviar
-                        </Button>}
+                        </Button>
+                      )}
+                      {p.status === "cancelled" && (
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteCancelled(p.id)}
+                          sx={{ ml: 1 }}
+                        >
+                          Borrar
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
-               ))
-               : <TableRow><TableCell colSpan={7} align="center">Sin propuestas</TableCell></TableRow>}
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    No hay propuestas
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
       </Container>
 
-      {/* ───── detalle ───── */}
-      <Dialog open={Boolean(detail)} onClose={()=>setDetail(null)} fullWidth maxWidth="md">
-        <DialogTitle>Detalle de la Propuesta</DialogTitle>
-        <DialogContent dividers>
-          {detail && (
-            <>
-              <Typography><b>ID:</b> {detail.id}</Typography>
-              <Typography><b>Oferta:</b> {detail.job_title ?? "—"}</Typography>
-              <Typography><b>Postulante:</b> {(detail.applicant_name ?? "—")+" ("+(detail.applicant_email??"—")+")"}</Typography>
-              <Typography><b>Etiqueta:</b> {detail.label==="manual"?"Manual":"Automático"}</Typography>
-              <Typography><b>Estado:</b> {detail.status}</Typography>
-              <Typography><b>Creado:</b> {fmtAR(detail.created_at)}</Typography>
-              {detail.sent_at      && <Typography><b>Enviado:</b>   {fmtAR(detail.sent_at)}</Typography>}
-              {detail.cancelled_at && <Typography><b>Cancelado:</b> {fmtAR(detail.cancelled_at)}</Typography>}
-            </>
-          )}
-        </DialogContent>
-        <DialogActions><Button onClick={()=>setDetail(null)}>Cerrar</Button></DialogActions>
-      </Dialog>
+      {/* Detalle */}
+      <ProposalDialog
+        open={Boolean(sel)}
+        proposal={sel}
+        onClose={() => setSel(null)}
+      />
 
-      {/* ───── snackbar ───── */}
+      {/* Snackbar */}
       <Snackbar
         open={snack.open}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
         autoHideDuration={4000}
-        onClose={()=>setSnack(s=>({...s,open:false}))}
-        anchorOrigin={{vertical:"bottom",horizontal:"center"}}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert severity={snack.sev} variant="filled">{snack.msg}</Alert>
+        <Alert severity={snack.sev} variant="filled">
+          {snack.msg}
+        </Alert>
       </Snackbar>
     </DashboardLayout>
   );
 }
 
-export async function getServerSideProps(){ return {props:{}} }
+/* ══════════════════════════════════════
+   Modal detalle reutilizable
+   ══════════════════════════════════════ */
+function ProposalDialog({ open, onClose, proposal }) {
+  if (!proposal) return null;
+
+  const rows = [
+    ["ID", proposal.id],
+    ["Oferta", proposal.job_title],
+    [
+      "Postulante",
+      `${proposal.applicant_name} (${proposal.applicant_email ?? "s/ email"})`,
+    ],
+    ["Etiqueta", proposal.label === "manual" ? "Manual" : "Automático"],
+    ["Estado", proposal.status],
+    ["Creado", formatAR(proposal.created_at)],
+    proposal.sent_at && ["Enviado", formatAR(proposal.sent_at)],
+    proposal.notes && ["Notas", proposal.notes],
+  ].filter(Boolean);
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>Detalle de la propuesta</DialogTitle>
+      <DialogContent dividers>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          {rows.map(([k, v]) => (
+            <Typography key={k}>
+              <strong>{k}:</strong> {v}
+            </Typography>
+          ))}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cerrar</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+export async function getServerSideProps() {
+  return { props: {} };
+}
