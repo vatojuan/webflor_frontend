@@ -28,8 +28,11 @@ import useAdminAuth from "../../hooks/useAdminAuth";
 /* ══════════════════════════════════════
    Utils
    ══════════════════════════════════════ */
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
-const fmtDate  = (d) => (d ? new Date(d).toLocaleDateString("es-AR") : "—");
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
+
+const fmtDate = (d) =>
+  d ? new Date(d).toLocaleDateString("es-AR") : "Sin fecha";
 const fmtLabel = (l) => (l === "manual" ? "Manual" : "Automático");
 
 /* ══════════════════════════════════════
@@ -39,13 +42,15 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const { user, loading } = useAdminAuth();
 
   const [offers, setOffers] = useState([]);
-  const [sel, setSel] = useState(null);              // editing offer
-  const [busy, setBusy] = useState(false);           // fetch / action flag
-  const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
+  const [sel, setSel] = useState(null); // oferta en edición
+  const [busy, setBusy] = useState(false);
+  const [snack, setSnack] = useState({
+    open: false,
+    msg: "",
+    sev: "success",
+  });
 
-  /* ————————————————————————————————————
-     Auth headers
-     ———————————————————————————————————— */
+  /* ─── Headers con token ───────────────────────── */
   const token =
     typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
   const headers = useMemo(
@@ -56,9 +61,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     [token]
   );
 
-  /* ————————————————————————————————————
-     Fetch offers
-     ———————————————————————————————————— */
+  /* ─── Obtener ofertas ─────────────────────────── */
   const fetchOffers = () => {
     if (!user || !token) return;
     setBusy(true);
@@ -68,17 +71,19 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
         return r.json();
       })
       .then((j) => setOffers(Array.isArray(j.offers) ? j.offers : []))
-      .catch((e) =>
-        setSnack({ open: true, msg: "Error obteniendo ofertas", sev: "error" })
+      .catch(() =>
+        setSnack({
+          open: true,
+          msg: "Error obteniendo ofertas",
+          sev: "error",
+        })
       )
       .finally(() => setBusy(false));
   };
 
   useEffect(fetchOffers, [user, token]);
 
-  /* ————————————————————————————————————
-     Delete
-     ———————————————————————————————————— */
+  /* ─── Eliminar ────────────────────────────────── */
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta oferta?")) return;
     try {
@@ -95,11 +100,19 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     }
   };
 
-  /* ————————————————————————————————————
-     Update
-     ———————————————————————————————————— */
+  /* ─── Update helpers ──────────────────────────── */
   const updateSel = (k, v) => setSel((old) => ({ ...old, [k]: v }));
+
   const handleSave = async () => {
+    // Validación rápida: las ofertas del admin requieren email de contacto
+    if (sel.source === "admin" && !sel.contactEmail) {
+      setSnack({
+        open: true,
+        msg: "Las ofertas del administrador requieren e-mail de contacto",
+        sev: "error",
+      });
+      return;
+    }
     try {
       const r = await fetch(`${API_URL}/api/job/update-admin`, {
         method: "PUT",
@@ -116,9 +129,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     }
   };
 
-  /* ————————————————————————————————————
-     Render
-     ———————————————————————————————————— */
+  /* ─── Render ──────────────────────────────────── */
   if (loading || busy)
     return (
       <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
@@ -147,6 +158,8 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
                   "Expira",
                   "Etiqueta",
                   "Fuente",
+                  "E-mail contacto",
+                  "Teléfono",
                   "Acciones",
                 ].map((h) => (
                   <TableCell key={h}>{h}</TableCell>
@@ -156,7 +169,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
             <TableBody>
               {offers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={9} align="center">
                     No hay ofertas
                   </TableCell>
                 </TableRow>
@@ -176,6 +189,8 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
                     <Chip label={fmtLabel(o.label)} size="small" />
                   </TableCell>
                   <TableCell>{o.source ?? "—"}</TableCell>
+                  <TableCell>{o.contactEmail || "—"}</TableCell>
+                  <TableCell>{o.contactPhone || "—"}</TableCell>
                   <TableCell>
                     <Button
                       size="small"
@@ -236,6 +251,25 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
                 InputLabelProps={{ shrink: true }}
                 value={sel.expirationDate ? sel.expirationDate.slice(0, 10) : ""}
                 onChange={(e) => updateSel("expirationDate", e.target.value)}
+              />
+              <TextField
+                label="E-mail de contacto"
+                type="email"
+                fullWidth
+                value={sel.contactEmail || ""}
+                onChange={(e) => updateSel("contactEmail", e.target.value)}
+                helperText={
+                  sel.source === "admin"
+                    ? "Requerido para ofertas del administrador"
+                    : ""
+                }
+                required={sel.source === "admin"}
+              />
+              <TextField
+                label="Teléfono de contacto"
+                fullWidth
+                value={sel.contactPhone || ""}
+                onChange={(e) => updateSel("contactPhone", e.target.value)}
               />
               <TextField
                 select
