@@ -1,7 +1,8 @@
-// pages/upload-cv.js
+// pages/cv/upload.js
 import { useState } from "react";
 import axios from "axios";
 import Head from "next/head";
+import MainLayout from "../../components/MainLayout";
 import {
   Container,
   Box,
@@ -13,16 +14,19 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import MainLayout from "../components/MainLayout";
 
 export default function UploadCVPage() {
   const [file, setFile] = useState(null);
   const [email, setEmail] = useState("");
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-  const [snackbar, setSnackbar] = useState({ open: false, severity: "success", message: "" });
   const [extractedText, setExtractedText] = useState("");
   const [embedding, setEmbedding] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    severity: "success",
+    message: "",
+  });
 
   const uploadFile = async (selectedFile) => {
     if (!selectedFile) {
@@ -34,6 +38,7 @@ export default function UploadCVPage() {
     if (email) formData.append("email", email.toLowerCase());
 
     setUploading(true);
+    setMessage("");
     try {
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/cv/upload`,
@@ -49,8 +54,9 @@ export default function UploadCVPage() {
       if (res.data.extracted_text) setExtractedText(res.data.extracted_text);
       if (res.data.embedding) setEmbedding(res.data.embedding);
     } catch (error) {
-      console.error("Error subiendo el CV:", error);
+      console.error("Error subiendo el CV:", error.response?.data || error.message);
       setSnackbar({ open: true, severity: "error", message: "Error al subir el CV." });
+      setMessage("Error al subir el CV.");
     } finally {
       setUploading(false);
     }
@@ -68,6 +74,7 @@ export default function UploadCVPage() {
         <title>Subí tu CV — Webflor IA</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
       <MainLayout>
         {/* Hero */}
         <Box
@@ -75,17 +82,18 @@ export default function UploadCVPage() {
             background: "linear-gradient(135deg,#0B2A2D 0%,#103B40 50%,#155158 100%)",
             color: "#FFF",
             py: { xs: 6, md: 8 },
+            textAlign: "center",
           }}
         >
-          <Container maxWidth="sm" sx={{ textAlign: "center" }}>
+          <Container maxWidth="sm">
             <Typography variant="h5" gutterBottom>
-              ¡Bienvenido a Webflor IA!
+              Bienvenido a Webflor IA
             </Typography>
             <Typography variant="h2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
               Subí tu CV
             </Typography>
             <Typography variant="body1" sx={{ opacity: 0.8, mt: 2 }}>
-              En pocos segundos analizamos tu currículum y generamos una descripción profesional.
+              Analizá tu currículum y obtené una descripción profesional en segundos.
             </Typography>
           </Container>
         </Box>
@@ -116,7 +124,7 @@ export default function UploadCVPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                helperText="Asociamos tu CV a este email si lo deseas."
+                helperText="Asociamos tu CV a este email si lo deseás."
                 fullWidth
               />
 
@@ -128,54 +136,48 @@ export default function UploadCVPage() {
                 </Alert>
               )}
             </Box>
+
+            {/* Resultados */}
+            {extractedText && (
+              <Box sx={{ mt: 6 }}>
+                <Typography variant="h6" gutterBottom>
+                  Texto extraído
+                </Typography>
+                <Paper
+                  sx={{
+                    p: 2,
+                    maxHeight: 240,
+                    overflow: "auto",
+                    backgroundColor: "rgba(255,255,255,0.95)",
+                  }}
+                >
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                    {extractedText}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
+
+            {embedding && (
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" gutterBottom>
+                  Embedding generado
+                </Typography>
+                <Paper
+                  sx={{
+                    p: 2,
+                    maxHeight: 240,
+                    overflow: "auto",
+                    backgroundColor: "rgba(255,255,255,0.95)",
+                  }}
+                >
+                  <Typography variant="body2" sx={{ fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
+                    {JSON.stringify(embedding, null, 2)}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
           </Paper>
-
-          {/* Resultados de extracción */}
-          {extractedText && (
-            <Box sx={{ mt: 6 }}>
-              <Typography variant="h6" gutterBottom color="common.white">
-                Texto extraído
-              </Typography>
-              <Paper
-                sx={{
-                  p: 2,
-                  maxHeight: 240,
-                  overflow: "auto",
-                  backgroundColor: "rgba(255,255,255,0.95)",
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{ whiteSpace: "pre-wrap", color: "text.primary" }}
-                >
-                  {extractedText}
-                </Typography>
-              </Paper>
-            </Box>
-          )}
-
-          {embedding && (
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="h6" gutterBottom color="common.white">
-                Embedding generado
-              </Typography>
-              <Paper
-                sx={{
-                  p: 2,
-                  maxHeight: 240,
-                  overflow: "auto",
-                  backgroundColor: "rgba(255,255,255,0.95)",
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{ fontFamily: "monospace", whiteSpace: "pre-wrap", color: "text.primary" }}
-                >
-                  {JSON.stringify(embedding, null, 2)}
-                </Typography>
-              </Paper>
-            </Box>
-          )}
         </Container>
 
         {/* Snackbar */}
