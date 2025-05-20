@@ -13,59 +13,50 @@ import {
   LinearProgress,
   Snackbar,
   Alert,
+  Divider,
 } from "@mui/material";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 
 export default function UploadCVPage() {
-  const [file, setFile] = useState(null);
   const [email, setEmail] = useState("");
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [extractedText, setExtractedText] = useState("");
   const [embedding, setEmbedding] = useState(null);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    severity: "success",
-    message: "",
-  });
+  const [snackbar, setSnackbar] = useState({ open: false, severity: "success", message: "" });
 
-  const uploadFile = async (selectedFile) => {
-    if (!selectedFile) {
-      setSnackbar({ open: true, severity: "warning", message: "Por favor selecciona un archivo." });
-      return;
+  const uploadFile = async (file) => {
+    if (!file) {
+      return setSnackbar({ open: true, severity: "warning", message: "Por favor selecciona un archivo." });
     }
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    if (email) formData.append("email", email.toLowerCase());
+    const form = new FormData();
+    form.append("file", file);
+    if (email) form.append("email", email.trim().toLowerCase());
 
     setUploading(true);
     setMessage("");
     try {
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/cv/upload`,
-        formData,
+        form,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
       setMessage(res.data.message || "CV procesado exitosamente.");
-      setSnackbar({
-        open: true,
-        severity: "success",
-        message: "CV procesado. Revisa tu correo (spam incluido).",
-      });
+      setSnackbar({ open: true, severity: "success", message: "CV procesado. Revisa tu correo (spam incluido)." });
       if (res.data.extracted_text) setExtractedText(res.data.extracted_text);
       if (res.data.embedding) setEmbedding(res.data.embedding);
-    } catch (error) {
-      console.error("Error subiendo el CV:", error.response?.data || error.message);
-      setSnackbar({ open: true, severity: "error", message: "Error al subir el CV." });
+    } catch (err) {
+      console.error(err);
       setMessage("Error al subir el CV.");
+      setSnackbar({ open: true, severity: "error", message: "Fallo al procesar tu CV." });
     } finally {
       setUploading(false);
     }
   };
 
   const handleFileChange = (e) => {
-    const selected = e.target.files[0];
-    setFile(selected);
-    if (selected) uploadFile(selected);
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file);
   };
 
   return (
@@ -79,37 +70,35 @@ export default function UploadCVPage() {
         {/* Hero */}
         <Box
           sx={{
-            background: "linear-gradient(135deg,#0B2A2D 0%,#103B40 50%,#155158 100%)",
+            background: "linear-gradient(135deg, #0B2A2D 0%, #103B40 50%, #155158 100%)",
             color: "#FFF",
-            py: { xs: 6, md: 8 },
             textAlign: "center",
+            py: { xs: 6, md: 8 },
           }}
         >
           <Container maxWidth="sm">
             <Typography variant="h5" gutterBottom>
-              Bienvenido a Webflor IA
+              Webflor IA
             </Typography>
             <Typography variant="h2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-              Subí tu CV
+              Sube tu CV
             </Typography>
-            <Typography variant="body1" sx={{ opacity: 0.8, mt: 2 }}>
-              Analizá tu currículum y obtené una descripción profesional en segundos.
+            <Typography variant="body1" sx={{ opacity: 0.85, mt: 2 }}>
+              En segundos analizamos tu currículum y generamos una descripción profesional.
             </Typography>
           </Container>
         </Box>
 
-        {/* Formulario */}
+        {/* Upload Form */}
         <Container maxWidth="sm" sx={{ py: 8 }}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 4,
-              borderTop: "6px solid #D96236",
-              backgroundColor: "background.paper",
-            }}
-          >
+          <Paper elevation={3} sx={{ p: 4, borderTop: "6px solid #D96236" }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <Button variant="contained" component="label" size="large">
+              <Button
+                variant="contained"
+                component="label"
+                startIcon={<UploadFileIcon />}
+                size="large"
+              >
                 Seleccionar CV (PDF o DOCX)
                 <input
                   type="file"
@@ -124,7 +113,7 @@ export default function UploadCVPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                helperText="Asociamos tu CV a este email si lo deseás."
+                helperText="Si quieres que enviemos el resumen a este email"
                 fullWidth
               />
 
@@ -137,20 +126,13 @@ export default function UploadCVPage() {
               )}
             </Box>
 
-            {/* Resultados */}
+            {/* Results */}
             {extractedText && (
               <Box sx={{ mt: 6 }}>
                 <Typography variant="h6" gutterBottom>
                   Texto extraído
                 </Typography>
-                <Paper
-                  sx={{
-                    p: 2,
-                    maxHeight: 240,
-                    overflow: "auto",
-                    backgroundColor: "rgba(255,255,255,0.95)",
-                  }}
-                >
+                <Paper sx={{ p: 2, maxHeight: 200, overflow: "auto" }}>
                   <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
                     {extractedText}
                   </Typography>
@@ -163,15 +145,12 @@ export default function UploadCVPage() {
                 <Typography variant="h6" gutterBottom>
                   Embedding generado
                 </Typography>
-                <Paper
-                  sx={{
-                    p: 2,
-                    maxHeight: 240,
-                    overflow: "auto",
-                    backgroundColor: "rgba(255,255,255,0.95)",
-                  }}
-                >
-                  <Typography variant="body2" sx={{ fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
+                <Paper sx={{ p: 2, maxHeight: 200, overflow: "auto" }}>
+                  <Typography
+                    variant="body2"
+                    component="pre"
+                    sx={{ fontFamily: "monospace", whiteSpace: "pre-wrap" }}
+                  >
                     {JSON.stringify(embedding, null, 2)}
                   </Typography>
                 </Paper>
@@ -184,11 +163,11 @@ export default function UploadCVPage() {
         <Snackbar
           open={snackbar.open}
           autoHideDuration={4000}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
           anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
           <Alert
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
             severity={snackbar.severity}
             variant="filled"
             sx={{ width: "100%" }}
