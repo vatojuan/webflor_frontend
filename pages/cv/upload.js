@@ -2,7 +2,7 @@
 import { useState } from "react";
 import axios from "axios";
 import Head from "next/head";
-import MainLayout from "../../components/MainLayout";
+import PublicLayout from "../../components/PublicLayout";
 import {
   Container,
   Box,
@@ -13,7 +13,6 @@ import {
   LinearProgress,
   Snackbar,
   Alert,
-  Divider,
 } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
@@ -23,7 +22,11 @@ export default function UploadCVPage() {
   const [message, setMessage] = useState("");
   const [extractedText, setExtractedText] = useState("");
   const [embedding, setEmbedding] = useState(null);
-  const [snackbar, setSnackbar] = useState({ open: false, severity: "success", message: "" });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    severity: "success",
+    message: "",
+  });
 
   const uploadFile = async (file) => {
     if (!file) {
@@ -31,7 +34,7 @@ export default function UploadCVPage() {
     }
     const form = new FormData();
     form.append("file", file);
-    if (email) form.append("email", email.trim().toLowerCase());
+    if (email.trim()) form.append("email", email.trim().toLowerCase());
 
     setUploading(true);
     setMessage("");
@@ -42,12 +45,16 @@ export default function UploadCVPage() {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
       setMessage(res.data.message || "CV procesado exitosamente.");
-      setSnackbar({ open: true, severity: "success", message: "CV procesado. Revisa tu correo (spam incluido)." });
+      setSnackbar({
+        open: true,
+        severity: "success",
+        message: "CV procesado. Revisa tu correo (spam incluido).",
+      });
       if (res.data.extracted_text) setExtractedText(res.data.extracted_text);
       if (res.data.embedding) setEmbedding(res.data.embedding);
     } catch (err) {
-      console.error(err);
-      setMessage("Error al subir el CV.");
+      console.error("Error subiendo el CV:", err);
+      setMessage("Error al procesar tu CV.");
       setSnackbar({ open: true, severity: "error", message: "Fallo al procesar tu CV." });
     } finally {
       setUploading(false);
@@ -66,11 +73,11 @@ export default function UploadCVPage() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <MainLayout>
+      <PublicLayout>
         {/* Hero */}
         <Box
           sx={{
-            background: "linear-gradient(135deg, #0B2A2D 0%, #103B40 50%, #155158 100%)",
+            background: "linear-gradient(135deg,#0B2A2D 0%,#103B40 50%,#155158 100%)",
             color: "#FFF",
             textAlign: "center",
             py: { xs: 6, md: 8 },
@@ -78,13 +85,13 @@ export default function UploadCVPage() {
         >
           <Container maxWidth="sm">
             <Typography variant="h5" gutterBottom>
-              Webflor IA
+              ¡Bienvenido a Webflor IA!
             </Typography>
             <Typography variant="h2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-              Sube tu CV
+              Subí tu CV
             </Typography>
-            <Typography variant="body1" sx={{ opacity: 0.85, mt: 2 }}>
-              En segundos analizamos tu currículum y generamos una descripción profesional.
+            <Typography variant="body1" sx={{ opacity: 0.8, mt: 2 }}>
+              En segundos generamos una descripción profesional de tu currículum.
             </Typography>
           </Container>
         </Box>
@@ -113,7 +120,7 @@ export default function UploadCVPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                helperText="Si quieres que enviemos el resumen a este email"
+                helperText="Si lo deseás, asociamos el resultado a este email."
                 fullWidth
               />
 
@@ -126,7 +133,7 @@ export default function UploadCVPage() {
               )}
             </Box>
 
-            {/* Results */}
+            {/* Extraction Result */}
             {extractedText && (
               <Box sx={{ mt: 6 }}>
                 <Typography variant="h6" gutterBottom>
@@ -140,6 +147,7 @@ export default function UploadCVPage() {
               </Box>
             )}
 
+            {/* Embedding Result */}
             {embedding && (
               <Box sx={{ mt: 4 }}>
                 <Typography variant="h6" gutterBottom>
@@ -147,7 +155,6 @@ export default function UploadCVPage() {
                 </Typography>
                 <Paper sx={{ p: 2, maxHeight: 200, overflow: "auto" }}>
                   <Typography
-                    variant="body2"
                     component="pre"
                     sx={{ fontFamily: "monospace", whiteSpace: "pre-wrap" }}
                   >
@@ -175,7 +182,7 @@ export default function UploadCVPage() {
             {snackbar.message}
           </Alert>
         </Snackbar>
-      </MainLayout>
+      </PublicLayout>
     </>
   );
 }
