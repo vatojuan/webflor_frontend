@@ -25,32 +25,20 @@ import {
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
-/* ══════════════════════════════════════
-   Utils
-   ══════════════════════════════════════ */
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
-
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString("es-AR") : "Sin fecha";
 const fmtLabel = (l) => (l === "manual" ? "Manual" : "Automático");
 
-/* ══════════════════════════════════════
-   Page Component
-   ══════════════════════════════════════ */
 export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const { user, loading } = useAdminAuth();
 
   const [offers, setOffers] = useState([]);
-  const [sel, setSel] = useState(null); // oferta en edición
+  const [sel, setSel] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [snack, setSnack] = useState({
-    open: false,
-    msg: "",
-    sev: "success",
-  });
+  const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
 
-  /* ─── Headers con token ───────────────────────── */
   const token =
     typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
   const headers = useMemo(
@@ -61,7 +49,6 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     [token]
   );
 
-  /* ─── Obtener ofertas ─────────────────────────── */
   const fetchOffers = () => {
     if (!user || !token) return;
     setBusy(true);
@@ -72,18 +59,13 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
       })
       .then((j) => setOffers(Array.isArray(j.offers) ? j.offers : []))
       .catch(() =>
-        setSnack({
-          open: true,
-          msg: "Error obteniendo ofertas",
-          sev: "error",
-        })
+        setSnack({ open: true, msg: "Error obteniendo ofertas", sev: "error" })
       )
       .finally(() => setBusy(false));
   };
 
   useEffect(fetchOffers, [user, token]);
 
-  /* ─── Eliminar ────────────────────────────────── */
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta oferta?")) return;
     try {
@@ -100,12 +82,10 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     }
   };
 
-  /* ─── Update helpers ──────────────────────────── */
   const updateSel = (k, v) => setSel((old) => ({ ...old, [k]: v }));
 
   const handleSave = async () => {
-    // Validación rápida: las ofertas del admin requieren email de contacto
-    if (sel.source === "admin" && !sel.contactEmail) {
+    if (sel.source === "admin" && !sel.contact_email) {
       setSnack({
         open: true,
         msg: "Las ofertas del administrador requieren e-mail de contacto",
@@ -129,7 +109,6 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     }
   };
 
-  /* ─── Render ──────────────────────────────────── */
   if (loading || busy)
     return (
       <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
@@ -189,8 +168,8 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
                     <Chip label={fmtLabel(o.label)} size="small" />
                   </TableCell>
                   <TableCell>{o.source ?? "—"}</TableCell>
-                  <TableCell>{o.contactEmail || "—"}</TableCell>
-                  <TableCell>{o.contactPhone || "—"}</TableCell>
+                  <TableCell>{o.contact_email || "—"}</TableCell>
+                  <TableCell>{o.contact_phone || "—"}</TableCell>
                   <TableCell>
                     <Button
                       size="small"
@@ -216,7 +195,6 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
         </TableContainer>
       </Container>
 
-      {/* ══ Diálogo Edición ══ */}
       <Dialog open={Boolean(sel)} onClose={() => setSel(null)} fullWidth>
         <DialogTitle>Editar oferta</DialogTitle>
         <DialogContent dividers>
@@ -252,12 +230,14 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
                 value={sel.expirationDate ? sel.expirationDate.slice(0, 10) : ""}
                 onChange={(e) => updateSel("expirationDate", e.target.value)}
               />
+
+              {/* Aquí usamos contact_email y contact_phone */}
               <TextField
                 label="E-mail de contacto"
                 type="email"
                 fullWidth
-                value={sel.contactEmail || ""}
-                onChange={(e) => updateSel("contactEmail", e.target.value)}
+                value={sel.contact_email || ""}
+                onChange={(e) => updateSel("contact_email", e.target.value)}
                 helperText={
                   sel.source === "admin"
                     ? "Requerido para ofertas del administrador"
@@ -268,9 +248,10 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
               <TextField
                 label="Teléfono de contacto"
                 fullWidth
-                value={sel.contactPhone || ""}
-                onChange={(e) => updateSel("contactPhone", e.target.value)}
+                value={sel.contact_phone || ""}
+                onChange={(e) => updateSel("contact_phone", e.target.value)}
               />
+
               <TextField
                 select
                 label="Etiqueta"
@@ -303,7 +284,6 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
         </DialogActions>
       </Dialog>
 
-      {/* ══ Snackbar ══ */}
       <Snackbar
         open={snack.open}
         onClose={() => setSnack((s) => ({ ...s, open: false }))}
