@@ -85,7 +85,7 @@ export default function UploadCVPage() {
         >
           <Container maxWidth="sm">
             <Typography variant="h5" gutterBottom>
-              ¡Bienvenido a Webflor IA!
+              ¡Bienvenidos a Fap Mendoza!
             </Typography>
             <Typography variant="h2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
               Subí tu CV
