@@ -1,3 +1,4 @@
+// frontend/pages/admin/agregar_cv.js
 import React, { useState } from "react";
 import useAdminAuth from "../../hooks/useAdminAuth";
 import DashboardLayout from "../../components/DashboardLayout";
@@ -18,13 +19,20 @@ import {
   ListItem,
   ListItemText,
   Divider,
-  Alert
+  Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from "@mui/material";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ErrorIcon from "@mui/icons-material/Error";
-import DeleteIcon from "@mui/icons-material/Delete";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import ClearAllIcon from "@mui/icons-material/ClearAll";
+import {
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon,
+  Delete as DeleteIcon,
+  CloudUpload as CloudUploadIcon,
+  ClearAll as ClearAllIcon,
+  ExpandMore as ExpandMoreIcon,
+  HighlightOff as HighlightOffIcon
+} from "@mui/icons-material";
 import axios from "axios";
 import Head from "next/head";
 
@@ -34,6 +42,7 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [fileProgress, setFileProgress] = useState({});
   const [results, setResults] = useState([]);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -43,7 +52,11 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
 
   const handleFilesChange = (e) => {
     const filesArray = Array.from(e.target.files);
-    setSelectedFiles(filesArray);
+    setSelectedFiles((prev) => [...prev, ...filesArray]);
+  };
+
+  const removeFile = (index) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const clearSelection = () => {
@@ -52,31 +65,20 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
 
   const clearResults = () => {
     setResults([]);
+    setFileProgress({});
   };
 
   const uploadFiles = async () => {
     if (selectedFiles.length === 0) {
-      setSnackbar({
-        open: true,
-        severity: "error",
-        message: "Por favor, selecciona al menos un archivo."
-      });
+      setSnackbar({ open: true, severity: "error", message: "Selecciona al menos un archivo." });
       return;
     }
     const formData = new FormData();
-    selectedFiles.forEach((file) => {
-      formData.append("files", file);
-    });
+    selectedFiles.forEach((file) => formData.append("files", file));
 
-    // Obtener el token almacenado en localStorage bajo "adminToken"
     const token = localStorage.getItem("adminToken");
-
     if (!token) {
-      setSnackbar({
-        open: true,
-        severity: "error",
-        message: "Error: Usuario no autenticado."
-      });
+      setSnackbar({ open: true, severity: "error", message: "Usuario no autenticado." });
       return;
     }
 
@@ -88,33 +90,29 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            "Authorization": `Bearer ${token}`
+            Authorization: `Bearer ${token}`
           },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setUploadProgress(percentCompleted);
+          onUploadProgress: (event) => {
+            const total = event.total || 1;
+            const percent = Math.round((event.loaded * 100) / total);
+            setUploadProgress(percent);
           }
         }
       );
-      setResults(res.data.results);
-      setSnackbar({
-        open: true,
-        severity: "success",
-        message: "CVs procesados correctamente."
-      });
-      setTimeout(() => {
-        clearResults();
-      }, 60000);
+
+      const data = res.data.results;
+      setResults(data);
+      setSnackbar({ open: true, severity: "success", message: "CVs procesados correctamente." });
+      // Inicializar progresos individuales
+      const prog = {};
+      data.forEach((r, i) => { prog[i] = 100; });
+      setFileProgress(prog);
+
+      setTimeout(clearResults, 60000);
       clearSelection();
     } catch (error) {
-      console.error("Error en la carga de CVs", error);
-      setSnackbar({
-        open: true,
-        severity: "error",
-        message: "Error procesando los CVs."
-      });
+      console.error(error);
+      setSnackbar({ open: true, severity: "error", message: "Error procesando los CVs." });
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -127,20 +125,21 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
         <title>Agregar CVs - Administrador</title>
       </Head>
       <CssBaseline />
+
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper sx={{ p: 4 }}>
           <Typography variant="h4" align="center" gutterBottom>
             Agregar CVs
           </Typography>
 
-          {/* Sección para seleccionar archivos */}
+          {/* Selección de archivos */}
           <Box sx={{ mb: 2 }}>
             <Button
               variant="contained"
               component="label"
               startIcon={<CloudUploadIcon />}
             >
-              Seleccionar CVs (PDF)
+              Seleccionar CVs
               <input
                 type="file"
                 accept=".pdf"
@@ -151,12 +150,16 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
             </Button>
             {selectedFiles.length > 0 && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle1">
-                  Archivos seleccionados:
-                </Typography>
                 <List>
-                  {selectedFiles.map((file, index) => (
-                    <ListItem key={index} divider>
+                  {selectedFiles.map((file, idx) => (
+                    <ListItem
+                      key={idx}
+                      secondaryAction={
+                        <IconButton edge="end" onClick={() => removeFile(idx)}>
+                          <HighlightOffIcon color="error" />
+                        </IconButton>
+                      }
+                    >
                       <ListItemText
                         primary={file.name}
                         secondary={`${(file.size / 1024).toFixed(2)} KB`}
@@ -167,10 +170,10 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
                 <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
                   <Button
                     variant="outlined"
-                    onClick={clearSelection}
                     startIcon={<ClearAllIcon />}
+                    onClick={clearSelection}
                   >
-                    Limpiar selección
+                    Limpiar
                   </Button>
                   <Button
                     variant="contained"
@@ -185,35 +188,26 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
             )}
           </Box>
 
-          {/* Indicador de progreso durante la subida */}
+          {/* Progreso global */}
           {uploading && (
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-              <LinearProgress
-                sx={{ flex: 1 }}
-                variant="determinate"
-                value={uploadProgress}
-              />
+              <LinearProgress sx={{ flex: 1 }} variant="determinate" value={uploadProgress} />
               <Typography variant="body2">{uploadProgress}%</Typography>
             </Box>
           )}
 
-          {/* Panel de resultados y logs */}
+          {/* Resultados y Logs */}
           {results.length > 0 && (
             <Box sx={{ mt: 4 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mb: 1
-                }}
-              >
-                <Typography variant="h6">Resultados del proceso</Typography>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                <Typography variant="h6">Resultados</Typography>
                 <IconButton onClick={clearResults} title="Limpiar logs">
                   <DeleteIcon />
                 </IconButton>
               </Box>
-              {results.map((result, index) => (
-                <Card key={index} sx={{ mb: 2 }}>
+
+              {results.map((result, idx) => (
+                <Card key={idx} sx={{ mb: 2 }}>
                   <CardHeader
                     avatar={
                       result.status === "success" ? (
@@ -222,38 +216,39 @@ export default function AdminAgregarCV({ toggleDarkMode, currentMode }) {
                         <ErrorIcon color="error" />
                       )
                     }
-                    title={`${result.file} ${
-                      result.email ? `(Email: ${result.email})` : ""
-                    }`}
+                    title={`${result.file} ${result.email ? `(${result.email})` : ""}`}
                     subheader={result.message}
                   />
                   <Divider />
                   <CardContent>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Logs del proceso:
-                    </Typography>
-                    <List dense>
-                      {result.logs &&
-                        result.logs.map((log, i) => (
-                          <ListItem key={i}>
-                            <ListItemText primary={log} />
-                          </ListItem>
+                    <Accordion>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography variant="subtitle2">Ver logs</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        {result.logs.map((log, i) => (
+                          <Typography key={i} variant="body2" paragraph>
+                            {log}
+                          </Typography>
                         ))}
-                    </List>
+                      </AccordionDetails>
+                    </Accordion>
                   </CardContent>
                 </Card>
               ))}
             </Box>
           )}
         </Paper>
+
+        {/* Snackbar */}
         <Snackbar
           open={snackbar.open}
           autoHideDuration={4000}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
           anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
           <Alert
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
             severity={snackbar.severity}
             variant="filled"
             sx={{ width: "100%" }}
