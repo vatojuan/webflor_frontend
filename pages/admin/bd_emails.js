@@ -17,33 +17,33 @@ export default function BdEmails() {
 
   const [tab, setTab] = useState(0);
 
-  /** ---------- TAB 0: IMPORTAR ---------- */
+  /* ---------- TAB 0: IMPORTAR ---------- */
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  /** ---------- TAB 1: MANUAL ---------- */
+  /* ---------- TAB 1: MANUAL ---------- */
   const [manual, setManual] = useState({ email: "", name: "", phone: "", notes: "" });
 
-  /** ---------- TAB 2: LISTADO & MAILING ---------- */
+  /* ---------- TAB 2: LISTADO & MAILING ---------- */
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
   const [selection, setSelection] = useState([]);
   const [loadingRows, setLoadingRows] = useState(false);
   const [mail, setMail] = useState({ subject: "", body: "" });
 
-  /** ---------- SNACKBAR ---------- */
+  /* ---------- SNACKBAR ---------- */
   const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
 
   const api = process.env.NEXT_PUBLIC_API_URL;
   const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
   const headers = { Authorization: `Bearer ${token}` };
 
-  /** ---------- Utils ---------- */
+  /* ---------- Utils ---------- */
   const handleSnack = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
-  /** ---------- Importar archivos ---------- */
+  /* ---------- Importar archivos ---------- */
   const handleFileSelect = (e) => setFiles(Array.from(e.target.files));
   const uploadFiles = async () => {
     if (!files.length) return;
@@ -66,7 +66,7 @@ export default function BdEmails() {
     }
   };
 
-  /** ---------- Alta manual ---------- */
+  /* ---------- Alta manual ---------- */
   const addManual = async () => {
     if (!manual.email) return handleSnack("E-mail requerido", "error");
     try {
@@ -78,7 +78,7 @@ export default function BdEmails() {
     }
   };
 
-  /** ---------- Listado ---------- */
+  /* ---------- Listado ---------- */
   const fetchRows = async () => {
     setLoadingRows(true);
     try {
@@ -110,14 +110,8 @@ export default function BdEmails() {
   const updateRow = async (params) => {
     const { id, field, value } = params;
     try {
-      await axios.put(
-        `${api}/admin_emails/${id}`,
-        { [field]: value },
-        { headers }
-      );
-      setRows((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
-      );
+      await axios.put(`${api}/admin_emails/${id}`, { [field]: value }, { headers });
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
     } catch {
       handleSnack("Error actualizando", "error");
     }
@@ -132,18 +126,13 @@ export default function BdEmails() {
     }
   };
 
-  /** ---------- Enviar mailing ---------- */
+  /* ---------- Enviar mailing ---------- */
   const sendBulk = async () => {
-    if (!mail.subject || !mail.body)
-      return handleSnack("Asunto y cuerpo requeridos", "error");
+    if (!mail.subject || !mail.body) return handleSnack("Asunto y cuerpo requeridos", "error");
     try {
       await axios.post(
         `${api}/admin_emails/send_bulk`,
-        {
-          subject: mail.subject,
-          body: mail.body,
-          ids: selection.length ? selection : undefined,
-        },
+        { subject: mail.subject, body: mail.body, ids: selection.length ? selection : undefined },
         { headers }
       );
       handleSnack("E-mails encolados para envío");
@@ -173,8 +162,15 @@ export default function BdEmails() {
             <>
               <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
                 Seleccionar archivos
-                <input hidden multiple onChange={handleFileSelect} />
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={handleFileSelect}
+                />
               </Button>
+
               {files.length > 0 && (
                 <Box mt={2}>
                   <List dense>
@@ -189,12 +185,14 @@ export default function BdEmails() {
                   </Button>
                 </Box>
               )}
+
               {uploading && (
                 <Box mt={2}>
                   <LinearProgress variant="determinate" value={progress} />
                   <Typography>{progress}%</Typography>
                 </Box>
               )}
+
               {results.length > 0 && (
                 <Box mt={4}>
                   <Box display="flex" justifyContent="space-between">
@@ -226,31 +224,11 @@ export default function BdEmails() {
           {/* ---------- TAB 1 ---------- */}
           {tab === 1 && (
             <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 400 }}>
-              <TextField
-                label="E-mail*"
-                value={manual.email}
-                onChange={(e) => setManual({ ...manual, email: e.target.value })}
-              />
-              <TextField
-                label="Nombre"
-                value={manual.name}
-                onChange={(e) => setManual({ ...manual, name: e.target.value })}
-              />
-              <TextField
-                label="Teléfono"
-                value={manual.phone}
-                onChange={(e) => setManual({ ...manual, phone: e.target.value })}
-              />
-              <TextField
-                label="Notas"
-                multiline
-                rows={3}
-                value={manual.notes}
-                onChange={(e) => setManual({ ...manual, notes: e.target.value })}
-              />
-              <Button variant="contained" onClick={addManual}>
-                Guardar
-              </Button>
+              <TextField label="E-mail*" value={manual.email} onChange={(e) => setManual({ ...manual, email: e.target.value })} />
+              <TextField label="Nombre" value={manual.name}   onChange={(e) => setManual({ ...manual, name: e.target.value })} />
+              <TextField label="Teléfono" value={manual.phone} onChange={(e) => setManual({ ...manual, phone: e.target.value })} />
+              <TextField label="Notas" multiline rows={3} value={manual.notes} onChange={(e) => setManual({ ...manual, notes: e.target.value })} />
+              <Button variant="contained" onClick={addManual}>Guardar</Button>
             </Box>
           )}
 
@@ -264,16 +242,15 @@ export default function BdEmails() {
                   onChange={(e) => setSearch(e.target.value)}
                   size="small"
                 />
-                <Button variant="contained" onClick={fetchRows}>
-                  Buscar
-                </Button>
+                <Button variant="contained" onClick={fetchRows}>Buscar</Button>
               </Box>
+
               <div style={{ height: 500, width: "100%" }}>
                 <DataGrid
                   rows={rows}
                   columns={[
                     { field: "email", headerName: "E-mail", flex: 1, editable: false },
-                    { field: "name", headerName: "Nombre", flex: 1, editable: true },
+                    { field: "name",  headerName: "Nombre", flex: 1, editable: true },
                     { field: "phone", headerName: "Teléfono", flex: 1, editable: true },
                     { field: "notes", headerName: "Notas", flex: 1, editable: true },
                     {
@@ -300,34 +277,16 @@ export default function BdEmails() {
                 <Typography variant="h6">
                   Enviar mailing {selection.length ? `(solo ${selection.length} seleccionados)` : "(a toda la base)"}
                 </Typography>
-                <TextField
-                  label="Asunto"
-                  value={mail.subject}
-                  onChange={(e) => setMail({ ...mail, subject: e.target.value })}
-                />
-                <TextField
-                  label="Cuerpo"
-                  multiline
-                  rows={6}
-                  value={mail.body}
-                  onChange={(e) => setMail({ ...mail, body: e.target.value })}
-                />
-                <Button variant="contained" startIcon={<SendIcon />} onClick={sendBulk}>
-                  Enviar
-                </Button>
+                <TextField label="Asunto" value={mail.subject} onChange={(e) => setMail({ ...mail, subject: e.target.value })} />
+                <TextField label="Cuerpo" multiline rows={6} value={mail.body} onChange={(e) => setMail({ ...mail, body: e.target.value })} />
+                <Button variant="contained" startIcon={<SendIcon />} onClick={sendBulk}>Enviar</Button>
               </Box>
             </>
           )}
         </Paper>
 
-        <Snackbar
-          open={snack.open}
-          autoHideDuration={4000}
-          onClose={() => setSnack({ ...snack, open: false })}
-        >
-          <Alert severity={snack.sev} variant="filled" sx={{ width: "100%" }}>
-            {snack.msg}
-          </Alert>
+        <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack({ ...snack, open: false })}>
+          <Alert severity={snack.sev} variant="filled" sx={{ width: "100%" }}>{snack.msg}</Alert>
         </Snackbar>
       </Container>
     </DashboardLayout>
