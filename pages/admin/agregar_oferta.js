@@ -78,7 +78,8 @@ export default function AgregarOferta({ toggleDarkMode, currentMode }) {
       requirements: form.requirements,
       expirationDate: expiration ? expiration.toISOString() : null,
       userId: adminId,
-      label: form.isPaid ? "manual" : form.label,
+      // Usamos siempre la etiqueta seleccionada
+      label: form.label,
       source: form.source,
       isPaid: form.isPaid,
       contactEmail: form.contactEmail || undefined,
@@ -142,7 +143,7 @@ export default function AgregarOferta({ toggleDarkMode, currentMode }) {
 
           <FormControl fullWidth>
             <InputLabel id="label-label">Etiqueta</InputLabel>
-            <Select labelId="label-label" value={form.label} label="Etiqueta" onChange={handleChange("label")} disabled={form.isPaid}>
+            <Select labelId="label-label" value={form.label} label="Etiqueta" onChange={handleChange("label")}>
               <MenuItem value="automatic">Automático</MenuItem>
               <MenuItem value="manual">Manual</MenuItem>
             </Select>
