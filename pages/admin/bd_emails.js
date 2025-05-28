@@ -83,17 +83,20 @@ export default function BdEmails() {
     setLoadingRows(true);
     try {
       const { data } = await axios.get(`${emailApi}/admin_emails`, {
-        params: { search, page: 1, page_size: 500 },
+        params: { search, page: 1, page_size: 200 }, // ≤200 para no romper la validación
         headers,
       });
       setRows(data.items);
-    } catch {
-      handleSnack("Error cargando filas", "error");
+    } catch (err) {
+      console.error("Error cargando filas:", err);
+      handleSnack("No se pudieron cargar los contactos", "error");
     } finally {
       setLoadingRows(false);
     }
   };
-  useEffect(() => { if (tab === 2) fetchRows(); }, [tab]);
+  useEffect(() => {
+    if (tab === 2) fetchRows();
+  }, [tab]);
 
   const toggleSelect = (id) => {
     setSelection((prev) => {
@@ -107,7 +110,10 @@ export default function BdEmails() {
     try {
       await axios.delete(`${emailApi}/admin_emails/${id}`, { headers });
       setRows((r) => r.filter((x) => x.id !== id));
-      setSelection((s) => { s.delete(id); return new Set(s); });
+      setSelection((s) => {
+        s.delete(id);
+        return new Set(s);
+      });
     } catch {
       handleSnack("Error eliminando", "error");
     }
@@ -115,17 +121,21 @@ export default function BdEmails() {
 
   // Mailing
   const sendBulk = async () => {
-    if (!mail.subject||!mail.body) return handleSnack("Asunto y cuerpo requeridos","error");
+    if (!mail.subject || !mail.body) return handleSnack("Asunto y cuerpo requeridos", "error");
     try {
-      await axios.post(`${emailApi}/admin_emails/send_bulk`, {
-        subject: mail.subject,
-        body: mail.body,
-        ids: [...selection],
-      }, { headers });
+      await axios.post(
+        `${emailApi}/admin_emails/send_bulk`,
+        {
+          subject: mail.subject,
+          body: mail.body,
+          ids: [...selection],
+        },
+        { headers }
+      );
       handleSnack("E-mails encolados");
-      setMail({ subject:"",body:"" });
+      setMail({ subject: "", body: "" });
     } catch {
-      handleSnack("Error enviando","error");
+      handleSnack("Error enviando", "error");
     }
   };
 
@@ -133,97 +143,180 @@ export default function BdEmails() {
     <DashboardLayout>
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Paper sx={{ p: 3 }}>
-          <Typography variant="h4" align="center" gutterBottom>BD E-mails</Typography>
-          <Tabs value={tab} onChange={(_,v)=>setTab(v)} sx={{ mb:3 }}>
+          <Typography variant="h4" align="center" gutterBottom>
+            BD E-mails
+          </Typography>
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
             <Tab label="Importar archivos" />
             <Tab label="Añadir manual" />
             <Tab label="Listado & Mailing" />
           </Tabs>
 
-          {tab===0 && <>
-            <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
-              Seleccionar archivos
-              <input type="file" hidden multiple accept=".pdf,.doc,.docx,.txt" onChange={handleFileSelect}/>
-            </Button>
-            {files.length>0 && <Box mt={2}>
-              <List dense>{files.map(f=>(
-                <ListItem key={f.name}><ListItemText primary={f.name}/></ListItem>
-              ))}</List>
-              <Button onClick={uploadFiles} variant="contained">Procesar</Button>
-            </Box>}
-            {uploading && <Box mt={2}><LinearProgress variant="determinate" value={progress}/> <Typography>{progress}%</Typography></Box>}
-            {results.length>0 && <Box mt={4}>
-              <Box display="flex" justifyContent="space-between"><Typography variant="h6">Resultados</Typography><IconButton onClick={()=>setResults([])}><DeleteIcon/></IconButton></Box>
-              {results.map((r,i)=>
-                <Card key={i} sx={{my:2}}>
-                  <CardHeader title={`${r.file} – ${r.email||"sin email"}`} subheader={r.status}/>
-                  <Divider/>
-                  <CardContent>
-                    <List dense>{r.logs.map((l,idx)=><ListItem key={idx}><ListItemText primary={l}/></ListItem>)}</List>
-                  </CardContent>
-                </Card>
+          {tab === 0 && (
+            <>
+              <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
+                Seleccionar archivos
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={handleFileSelect}
+                />
+              </Button>
+              {files.length > 0 && (
+                <Box mt={2}>
+                  <List dense>
+                    {files.map((f) => (
+                      <ListItem key={f.name}>
+                        <ListItemText primary={f.name} />
+                      </ListItem>
+                    ))}
+                  </List>
+                  <Button onClick={uploadFiles} variant="contained">
+                    Procesar
+                  </Button>
+                </Box>
               )}
-            </Box>}
-          </>}
-
-          {tab===1 && <Box component="form" sx={{display:"flex",flexDirection:"column",gap:2,maxWidth:400}}>
-            <TextField label="E-mail*" value={manual.email} onChange={e=>setManual({...manual,email:e.target.value})}/>
-            <TextField label="Nombre"  value={manual.name}  onChange={e=>setManual({...manual,name:e.target.value})}/>
-            <TextField label="Teléfono" value={manual.phone} onChange={e=>setManual({...manual,phone:e.target.value})}/>
-            <TextField label="Notas" multiline rows={3} value={manual.notes} onChange={e=>setManual({...manual,notes:e.target.value})}/>
-            <Button variant="contained" onClick={addManual}>Guardar</Button>
-          </Box>}
-
-          {tab===2 && <>
-            <Box sx={{mb:2,display:"flex",gap:2}}>
-              <TextField label="Buscar e-mail / nombre" size="small" value={search} onChange={e=>setSearch(e.target.value)}/>
-              <Button variant="contained" onClick={fetchRows}>Buscar</Button>
-            </Box>
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox"/>
-                    <TableCell>E-mail</TableCell>
-                    <TableCell>Nombre</TableCell>
-                    <TableCell>Teléfono</TableCell>
-                    <TableCell>Notas</TableCell>
-                    <TableCell>Acciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map(row=>(
-                    <TableRow key={row.id} hover>
-                      <TableCell padding="checkbox">
-                        <Checkbox checked={selection.has(row.id)} onChange={()=>toggleSelect(row.id)}/>
-                      </TableCell>
-                      <TableCell>{row.email}</TableCell>
-                      <TableCell>{row.name}</TableCell>
-                      <TableCell>{row.phone}</TableCell>
-                      <TableCell>{row.notes}</TableCell>
-                      <TableCell>
-                        <IconButton size="small" onClick={()=>deleteRow(row.id)}><DeleteIcon/></IconButton>
-                      </TableCell>
-                    </TableRow>
+              {uploading && (
+                <Box mt={2}>
+                  <LinearProgress variant="determinate" value={progress} />{" "}
+                  <Typography>{progress}%</Typography>
+                </Box>
+              )}
+              {results.length > 0 && (
+                <Box mt={4}>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="h6">Resultados</Typography>
+                    <IconButton onClick={() => setResults([])}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                  {results.map((r, i) => (
+                    <Card key={i} sx={{ my: 2 }}>
+                      <CardHeader title={`${r.file} – ${r.email || "sin email"}`} subheader={r.status} />
+                      <Divider />
+                      <CardContent>
+                        <List dense>
+                          {r.logs.map((l, idx) => (
+                            <ListItem key={idx}>
+                              <ListItemText primary={l} />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </CardContent>
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                </Box>
+              )}
+            </>
+          )}
 
-            <Box sx={{mt:3,maxWidth:600,display:"flex",flexDirection:"column",gap:2}}>
-              <Typography variant="h6">
-                Enviar mailing {selection.size?`(seleccionados: ${selection.size})`:"(toda la base)"}
-              </Typography>
-              <TextField label="Asunto" value={mail.subject} onChange={e=>setMail({...mail,subject:e.target.value})}/>
-              <TextField label="Cuerpo" multiline rows={6} value={mail.body} onChange={e=>setMail({...mail,body:e.target.value})}/>
-              <Button variant="contained" startIcon={<SendIcon/>} onClick={sendBulk}>Enviar</Button>
+          {tab === 1 && (
+            <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 400 }}>
+              <TextField
+                label="E-mail*"
+                value={manual.email}
+                onChange={(e) => setManual({ ...manual, email: e.target.value })}
+              />
+              <TextField
+                label="Nombre"
+                value={manual.name}
+                onChange={(e) => setManual({ ...manual, name: e.target.value })}
+              />
+              <TextField
+                label="Teléfono"
+                value={manual.phone}
+                onChange={(e) => setManual({ ...manual, phone: e.target.value })}
+              />
+              <TextField
+                label="Notas"
+                multiline
+                rows={3}
+                value={manual.notes}
+                onChange={(e) => setManual({ ...manual, notes: e.target.value })}
+              />
+              <Button variant="contained" onClick={addManual}>
+                Guardar
+              </Button>
             </Box>
-          </>}
+          )}
 
+          {tab === 2 && (
+            <>
+              <Box sx={{ mb: 2, display: "flex", gap: 2 }}>
+                <TextField
+                  label="Buscar e-mail / nombre"
+                  size="small"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <Button variant="contained" onClick={fetchRows}>
+                  Buscar
+                </Button>
+              </Box>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox" />
+                      <TableCell>E-mail</TableCell>
+                      <TableCell>Nombre</TableCell>
+                      <TableCell>Teléfono</TableCell>
+                      <TableCell>Notas</TableCell>
+                      <TableCell>Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rows.map((row) => (
+                      <TableRow key={row.id} hover>
+                        <TableCell padding="checkbox">
+                          <Checkbox checked={selection.has(row.id)} onChange={() => toggleSelect(row.id)} />
+                        </TableCell>
+                        <TableCell>{row.email}</TableCell>
+                        <TableCell>{row.name}</TableCell>
+                        <TableCell>{row.phone}</TableCell>
+                        <TableCell>{row.notes}</TableCell>
+                        <TableCell>
+                          <IconButton size="small" onClick={() => deleteRow(row.id)}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <Box sx={{ mt: 3, maxWidth: 600, display: "flex", flexDirection: "column", gap: 2 }}>
+                <Typography variant="h6">
+                  Enviar mailing{" "}
+                  {selection.size ? `(seleccionados: ${selection.size})` : "(toda la base)"}
+                </Typography>
+                <TextField
+                  label="Asunto"
+                  value={mail.subject}
+                  onChange={(e) => setMail({ ...mail, subject: e.target.value })}
+                />
+                <TextField
+                  label="Cuerpo"
+                  multiline
+                  rows={6}
+                  value={mail.body}
+                  onChange={(e) => setMail({ ...mail, body: e.target.value })}
+                />
+                <Button variant="contained" startIcon={<SendIcon />} onClick={sendBulk}>
+                  Enviar
+                </Button>
+              </Box>
+            </>
+          )}
         </Paper>
 
-        <Snackbar open={snack.open} autoHideDuration={4000} onClose={()=>setSnack(prev=>({...prev,open:false}))}>
-          <Alert severity={snack.sev} variant="filled" sx={{width:"100%"}}>{snack.msg}</Alert>
+        <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack((prev) => ({ ...prev, open: false }))}>
+          <Alert severity={snack.sev} variant="filled" sx={{ width: "100%" }}>
+            {snack.msg}
+          </Alert>
         </Snackbar>
       </Container>
     </DashboardLayout>
