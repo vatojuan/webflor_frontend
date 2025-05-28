@@ -1,4 +1,5 @@
 // pages/admin/bd_emails.js
+import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import {
   Tabs, Tab, Box, Button, Typography, TextField, Paper, Container,
@@ -9,25 +10,24 @@ import {
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SendIcon from "@mui/icons-material/Send";
-import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
+import DashboardLayout from "../../components/DashboardLayout";
 import axios from "axios";
 
-export default function BdEmails() {
-  useAdminAuth();
-
+function BdEmails() {
+  const { user, loading: authLoading } = useAdminAuth();
   const [tab, setTab] = useState(0);
 
-  // TAB 0: importar
+  // TAB 0 state
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // TAB 1: manual
+  // TAB 1 state
   const [manual, setManual] = useState({ email: "", name: "", phone: "", notes: "" });
 
-  // TAB 2: listado & mailing
+  // TAB 2 state
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
   const [selection, setSelection] = useState(new Set());
@@ -36,14 +36,15 @@ export default function BdEmails() {
 
   // Snackbar
   const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
+
   const apiRoot = process.env.NEXT_PUBLIC_API_URL;
   const emailApi = `${apiRoot}/api/admin/emails`;
   const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   const handleSnack = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
-  // Importar archivos
+  // TAB 0: importar archivos
   const handleFileSelect = (e) => setFiles(Array.from(e.target.files));
   const uploadFiles = async () => {
     if (!files.length) return;
@@ -66,7 +67,7 @@ export default function BdEmails() {
     }
   };
 
-  // Alta manual
+  // TAB 1: alta manual
   const addManual = async () => {
     if (!manual.email) return handleSnack("E-mail requerido", "error");
     try {
@@ -78,12 +79,16 @@ export default function BdEmails() {
     }
   };
 
-  // Listado
+  // TAB 2: listado & mailing
   const fetchRows = async () => {
+    if (!token) {
+      handleSnack("No autenticado", "error");
+      return;
+    }
     setLoadingRows(true);
     try {
       const { data } = await axios.get(`${emailApi}/admin_emails`, {
-        params: { search, page: 1, page_size: 200 }, // ≤200 para no romper la validación
+        params: { search, page: 1, page_size: 200 },
         headers,
       });
       setRows(data.items);
@@ -94,9 +99,12 @@ export default function BdEmails() {
       setLoadingRows(false);
     }
   };
+
   useEffect(() => {
-    if (tab === 2) fetchRows();
-  }, [tab]);
+    if (tab === 2 && !authLoading) {
+      fetchRows();
+    }
+  }, [tab, authLoading]);
 
   const toggleSelect = (id) => {
     setSelection((prev) => {
@@ -119,17 +127,12 @@ export default function BdEmails() {
     }
   };
 
-  // Mailing
   const sendBulk = async () => {
     if (!mail.subject || !mail.body) return handleSnack("Asunto y cuerpo requeridos", "error");
     try {
       await axios.post(
         `${emailApi}/admin_emails/send_bulk`,
-        {
-          subject: mail.subject,
-          body: mail.body,
-          ids: [...selection],
-        },
+        { subject: mail.subject, body: mail.body, ids: [...selection] },
         { headers }
       );
       handleSnack("E-mails encolados");
@@ -138,6 +141,11 @@ export default function BdEmails() {
       handleSnack("Error enviando", "error");
     }
   };
+
+  if (authLoading) {
+    // Mientras valida token, evitar renderizado
+    return null;
+  }
 
   return (
     <DashboardLayout>
@@ -313,7 +321,11 @@ export default function BdEmails() {
           )}
         </Paper>
 
-        <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack((prev) => ({ ...prev, open: false }))}>
+        <Snackbar
+          open={snack.open}
+          autoHideDuration={4000}
+          onClose={() => setSnack((prev) => ({ ...prev, open: false }))}
+        >
           <Alert severity={snack.sev} variant="filled" sx={{ width: "100%" }}>
             {snack.msg}
           </Alert>
@@ -322,3 +334,6 @@ export default function BdEmails() {
     </DashboardLayout>
   );
 }
+
+// Deshabilita SSR para evitar errores de hidración con localStorage/token
+export default dynamic(() => Promise.resolve(BdEmails), { ssr: false });
