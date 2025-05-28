@@ -1,10 +1,12 @@
 // pages/_app.js
-import '@mui/x-data-grid/data-grid.css';
+import '@mui/x-data-grid/styles/index.css'; // Estilos del DataGrid
 import '../styles/globals.css';
+
 import { useState, useMemo, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Head from 'next/head';
+
 
 function MyApp({ Component, pageProps }) {
   const [mode, setMode] = useState('light');
@@ -15,7 +17,7 @@ function MyApp({ Component, pageProps }) {
   }, []);
 
   const toggleDarkMode = () => {
-    setMode(prev => {
+    setMode((prev) => {
       const next = prev === 'light' ? 'dark' : 'light';
       localStorage.setItem('adminColorMode', next);
       return next;
