@@ -1,5 +1,5 @@
 // pages/_app.js
-import '../styles/globals.css';
+import '../styles/globals.css';        // tu CSS global
 import { useState, useMemo, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
