@@ -13,7 +13,7 @@ import useAdminAuth from "../../hooks/useAdminAuth";
 import axios from "axios";
 
 export default function BdEmails() {
-  useAdminAuth();
+  useAdminAuth();                              // protección de ruta
 
   const [tab, setTab] = useState(0);
 
@@ -36,22 +36,25 @@ export default function BdEmails() {
   /* ---------- SNACKBAR ---------- */
   const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
 
-  const api = process.env.NEXT_PUBLIC_API_URL;
-  const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
-  const headers = { Authorization: `Bearer ${token}` };
+  /* ---------- API ---------- */
+  const apiRoot  = process.env.NEXT_PUBLIC_API_URL;
+  const emailApi = `${apiRoot}/api/admin/emails`;
+  const token    = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
+  const headers  = { Authorization: `Bearer ${token}` };
 
   /* ---------- Utils ---------- */
   const handleSnack = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
   /* ---------- Importar archivos ---------- */
   const handleFileSelect = (e) => setFiles(Array.from(e.target.files));
+
   const uploadFiles = async () => {
     if (!files.length) return;
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f));
     setUploading(true);
     try {
-      const { data } = await axios.post(`${api}/admin_emails_upload`, fd, {
+      const { data } = await axios.post(`${emailApi}/admin_emails_upload`, fd, {
         headers,
         onUploadProgress: (e) => setProgress(Math.round((100 * e.loaded) / e.total)),
       });
@@ -70,7 +73,7 @@ export default function BdEmails() {
   const addManual = async () => {
     if (!manual.email) return handleSnack("E-mail requerido", "error");
     try {
-      await axios.post(`${api}/admin_emails_manual`, manual, { headers });
+      await axios.post(`${emailApi}/admin_emails_manual`, manual, { headers });
       handleSnack("Contacto agregado");
       setManual({ email: "", name: "", phone: "", notes: "" });
     } catch (err) {
@@ -82,7 +85,7 @@ export default function BdEmails() {
   const fetchRows = async () => {
     setLoadingRows(true);
     try {
-      const { data } = await axios.get(`${api}/admin_emails`, {
+      const { data } = await axios.get(`${emailApi}/admin_emails`, {
         params: { search, page: 1, page_size: 500 },
         headers,
       });
@@ -103,14 +106,11 @@ export default function BdEmails() {
       setLoadingRows(false);
     }
   };
-  useEffect(() => {
-    if (tab === 2) fetchRows();
-  }, [tab]); // eslint-disable-line
+  useEffect(() => { if (tab === 2) fetchRows(); }, [tab]); // eslint-disable-line
 
-  const updateRow = async (params) => {
-    const { id, field, value } = params;
+  const updateRow = async ({ id, field, value }) => {
     try {
-      await axios.put(`${api}/admin_emails/${id}`, { [field]: value }, { headers });
+      await axios.put(`${emailApi}/admin_emails/${id}`, { [field]: value }, { headers });
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
     } catch {
       handleSnack("Error actualizando", "error");
@@ -119,7 +119,7 @@ export default function BdEmails() {
 
   const deleteRow = async (id) => {
     try {
-      await axios.delete(`${api}/admin_emails/${id}`, { headers });
+      await axios.delete(`${emailApi}/admin_emails/${id}`, { headers });
       setRows((prev) => prev.filter((r) => r.id !== id));
     } catch {
       handleSnack("Error eliminando", "error");
@@ -131,7 +131,7 @@ export default function BdEmails() {
     if (!mail.subject || !mail.body) return handleSnack("Asunto y cuerpo requeridos", "error");
     try {
       await axios.post(
-        `${api}/admin_emails/send_bulk`,
+        `${emailApi}/admin_emails/send_bulk`,
         { subject: mail.subject, body: mail.body, ids: selection.length ? selection : undefined },
         { headers }
       );
@@ -225,7 +225,7 @@ export default function BdEmails() {
           {tab === 1 && (
             <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 400 }}>
               <TextField label="E-mail*" value={manual.email} onChange={(e) => setManual({ ...manual, email: e.target.value })} />
-              <TextField label="Nombre" value={manual.name}   onChange={(e) => setManual({ ...manual, name: e.target.value })} />
+              <TextField label="Nombre"  value={manual.name}  onChange={(e) => setManual({ ...manual, name: e.target.value })} />
               <TextField label="Teléfono" value={manual.phone} onChange={(e) => setManual({ ...manual, phone: e.target.value })} />
               <TextField label="Notas" multiline rows={3} value={manual.notes} onChange={(e) => setManual({ ...manual, notes: e.target.value })} />
               <Button variant="contained" onClick={addManual}>Guardar</Button>
@@ -236,12 +236,7 @@ export default function BdEmails() {
           {tab === 2 && (
             <>
               <Box sx={{ mb: 2, display: "flex", gap: 2 }}>
-                <TextField
-                  label="Buscar email / nombre"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  size="small"
-                />
+                <TextField label="Buscar email / nombre" value={search} onChange={(e) => setSearch(e.target.value)} size="small" />
                 <Button variant="contained" onClick={fetchRows}>Buscar</Button>
               </Box>
 
@@ -286,7 +281,9 @@ export default function BdEmails() {
         </Paper>
 
         <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack({ ...snack, open: false })}>
-          <Alert severity={snack.sev} variant="filled" sx={{ width: "100%" }}>{snack.msg}</Alert>
+          <Alert severity={snack.sev} variant="filled" sx={{ width: "100%" }}>
+            {snack.msg}
+          </Alert>
         </Snackbar>
       </Container>
     </DashboardLayout>
