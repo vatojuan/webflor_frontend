@@ -18,13 +18,14 @@ import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import AssignmentIcon from "@mui/icons-material/Assignment";
-import SettingsIcon from "@mui/icons-material/Settings";
 import WidgetsIcon from "@mui/icons-material/Widgets";
+import SettingsIcon from "@mui/icons-material/Settings";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import EmailIcon from "@mui/icons-material/Email";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
@@ -119,7 +120,8 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
     { text: "Mis ofertas", icon: <ListAltIcon />, href: "/admin/mis_ofertas" },
     { text: "Matchins", icon: <CompareArrowsIcon />, href: "/admin/matchins" },
     { text: "Propuestas", icon: <AssignmentIcon />, href: "/admin/propuestas" },
-    { text: "Plantillas", icon: <WidgetsIcon />, href: "/admin/templates" },  // New
+    { text: "Plantillas", icon: <WidgetsIcon />, href: "/admin/templates" },
+    { text: "BD e-mails", icon: <EmailIcon />, href: "/admin/bd_emails" },
     { text: "Configuraciones", icon: <SettingsIcon />, href: "/admin/configuraciones" },
   ];
 
