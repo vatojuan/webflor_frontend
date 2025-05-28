@@ -1,6 +1,7 @@
 // pages/admin/bd_emails.js
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import {
   Tabs, Tab, Box, Button, Typography, TextField, Paper, Container,
   List, ListItem, ListItemText, LinearProgress, Snackbar, Alert,
@@ -15,6 +16,7 @@ import DashboardLayout from "../../components/DashboardLayout";
 import axios from "axios";
 
 function BdEmails() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAdminAuth();
   const [tab, setTab] = useState(0);
 
@@ -44,6 +46,13 @@ function BdEmails() {
 
   const handleSnack = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
+  // Ensure auth
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/admin/login");
+    }
+  }, [authLoading, user, router]);
+
   // TAB 0: importar archivos
   const handleFileSelect = (e) => setFiles(Array.from(e.target.files));
   const uploadFiles = async () => {
@@ -59,8 +68,13 @@ function BdEmails() {
       setResults(data.results);
       handleSnack("Archivos procesados");
       setFiles([]);
-    } catch {
-      handleSnack("Error procesando archivos", "error");
+    } catch (err) {
+      if (err.response?.status === 401) {
+        handleSnack("Sesión expirada, por favor ingresa de nuevo", "error");
+        router.push("/admin/login");
+      } else {
+        handleSnack("Error procesando archivos", "error");
+      }
     } finally {
       setUploading(false);
       setProgress(0);
@@ -75,16 +89,18 @@ function BdEmails() {
       handleSnack("Contacto agregado");
       setManual({ email: "", name: "", phone: "", notes: "" });
     } catch (err) {
-      handleSnack(err.response?.data?.detail || "Error", "error");
+      if (err.response?.status === 401) {
+        handleSnack("Sesión expirada", "error");
+        router.push("/admin/login");
+      } else {
+        handleSnack(err.response?.data?.detail || "Error", "error");
+      }
     }
   };
 
   // TAB 2: listado & mailing
   const fetchRows = async () => {
-    if (!token) {
-      handleSnack("No autenticado", "error");
-      return;
-    }
+    if (!token) return;
     setLoadingRows(true);
     try {
       const { data } = await axios.get(`${emailApi}/admin_emails`, {
@@ -93,8 +109,13 @@ function BdEmails() {
       });
       setRows(data.items);
     } catch (err) {
-      console.error("Error cargando filas:", err);
-      handleSnack("No se pudieron cargar los contactos", "error");
+      if (err.response?.status === 401) {
+        handleSnack("No autorizado", "error");
+        router.push("/admin/login");
+      } else {
+        console.error("Error cargando filas:", err);
+        handleSnack("No se pudieron cargar los contactos", "error");
+      }
     } finally {
       setLoadingRows(false);
     }
@@ -122,8 +143,13 @@ function BdEmails() {
         s.delete(id);
         return new Set(s);
       });
-    } catch {
-      handleSnack("Error eliminando", "error");
+    } catch (err) {
+      if (err.response?.status === 401) {
+        handleSnack("No autorizado", "error");
+        router.push("/admin/login");
+      } else {
+        handleSnack("Error eliminando", "error");
+      }
     }
   };
 
@@ -137,23 +163,23 @@ function BdEmails() {
       );
       handleSnack("E-mails encolados");
       setMail({ subject: "", body: "" });
-    } catch {
-      handleSnack("Error enviando", "error");
+    } catch (err) {
+      if (err.response?.status === 401) {
+        handleSnack("No autorizado", "error");
+        router.push("/admin/login");
+      } else {
+        handleSnack("Error enviando", "error");
+      }
     }
   };
 
-  if (authLoading) {
-    // Mientras valida token, evitar renderizado
-    return null;
-  }
+  if (authLoading || !user) return null; // espera a auth
 
   return (
     <DashboardLayout>
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Paper sx={{ p: 3 }}>
-          <Typography variant="h4" align="center" gutterBottom>
-            BD E-mails
-          </Typography>
+          <Typography variant="h4" align="center" gutterBottom>BD E-mails</Typography>
           <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
             <Tab label="Importar archivos" />
             <Tab label="Añadir manual" />
@@ -164,54 +190,33 @@ function BdEmails() {
             <>
               <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
                 Seleccionar archivos
-                <input
-                  type="file"
-                  hidden
-                  multiple
-                  accept=".pdf,.doc,.docx,.txt"
-                  onChange={handleFileSelect}
-                />
+                <input type="file" hidden multiple accept=".pdf,.doc,.docx,.txt" onChange={handleFileSelect} />
               </Button>
               {files.length > 0 && (
                 <Box mt={2}>
                   <List dense>
-                    {files.map((f) => (
-                      <ListItem key={f.name}>
-                        <ListItemText primary={f.name} />
-                      </ListItem>
-                    ))}
+                    {files.map((f) => <ListItem key={f.name}><ListItemText primary={f.name}/></ListItem>)}
                   </List>
-                  <Button onClick={uploadFiles} variant="contained">
-                    Procesar
-                  </Button>
+                  <Button onClick={uploadFiles} variant="contained">Procesar</Button>
                 </Box>
               )}
               {uploading && (
                 <Box mt={2}>
-                  <LinearProgress variant="determinate" value={progress} />{" "}
-                  <Typography>{progress}%</Typography>
+                  <LinearProgress variant="determinate" value={progress}/> <Typography>{progress}%</Typography>
                 </Box>
               )}
               {results.length > 0 && (
                 <Box mt={4}>
                   <Box display="flex" justifyContent="space-between">
                     <Typography variant="h6">Resultados</Typography>
-                    <IconButton onClick={() => setResults([])}>
-                      <DeleteIcon />
-                    </IconButton>
+                    <IconButton onClick={() => setResults([])}><DeleteIcon/></IconButton>
                   </Box>
                   {results.map((r, i) => (
                     <Card key={i} sx={{ my: 2 }}>
-                      <CardHeader title={`${r.file} – ${r.email || "sin email"}`} subheader={r.status} />
-                      <Divider />
+                      <CardHeader title={`${r.file} – ${r.email||"sin email"}`} subheader={r.status}/>
+                      <Divider/>
                       <CardContent>
-                        <List dense>
-                          {r.logs.map((l, idx) => (
-                            <ListItem key={idx}>
-                              <ListItemText primary={l} />
-                            </ListItem>
-                          ))}
-                        </List>
+                        <List dense>{r.logs.map((l,idx)=><ListItem key={idx}><ListItemText primary={l}/></ListItem>)}</List>
                       </CardContent>
                     </Card>
                   ))}
@@ -221,53 +226,26 @@ function BdEmails() {
           )}
 
           {tab === 1 && (
-            <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 400 }}>
-              <TextField
-                label="E-mail*"
-                value={manual.email}
-                onChange={(e) => setManual({ ...manual, email: e.target.value })}
-              />
-              <TextField
-                label="Nombre"
-                value={manual.name}
-                onChange={(e) => setManual({ ...manual, name: e.target.value })}
-              />
-              <TextField
-                label="Teléfono"
-                value={manual.phone}
-                onChange={(e) => setManual({ ...manual, phone: e.target.value })}
-              />
-              <TextField
-                label="Notas"
-                multiline
-                rows={3}
-                value={manual.notes}
-                onChange={(e) => setManual({ ...manual, notes: e.target.value })}
-              />
-              <Button variant="contained" onClick={addManual}>
-                Guardar
-              </Button>
+            <Box component="form" sx={{display:"flex",flexDirection:"column",gap:2,maxWidth:400}}>
+              <TextField label="E-mail*" value={manual.email} onChange={e=>setManual({...manual,email:e.target.value})}/>
+              <TextField label="Nombre"  value={manual.name} onChange={e=>setManual({...manual,name:e.target.value})}/>
+              <TextField label="Teléfono" value={manual.phone} onChange={e=>setManual({...manual,phone:e.target.value})}/>
+              <TextField label="Notas" multiline rows={3} value={manual.notes} onChange={e=>setManual({...manual,notes:e.target.value})}/>
+              <Button variant="contained" onClick={addManual}>Guardar</Button>
             </Box>
           )}
 
           {tab === 2 && (
             <>
-              <Box sx={{ mb: 2, display: "flex", gap: 2 }}>
-                <TextField
-                  label="Buscar e-mail / nombre"
-                  size="small"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <Button variant="contained" onClick={fetchRows}>
-                  Buscar
-                </Button>
+              <Box sx={{mb:2,display:"flex",gap:2}}>
+                <TextField label="Buscar e-mail / nombre" size="small" value={search} onChange={e=>setSearch(e.target.value)}/>
+                <Button variant="contained" onClick={fetchRows}>Buscar</Button>
               </Box>
               <TableContainer component={Paper} variant="outlined">
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell padding="checkbox" />
+                      <TableCell padding="checkbox"/>
                       <TableCell>E-mail</TableCell>
                       <TableCell>Nombre</TableCell>
                       <TableCell>Teléfono</TableCell>
@@ -276,19 +254,17 @@ function BdEmails() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {rows.map((row) => (
+                    {rows.map(row=>(
                       <TableRow key={row.id} hover>
                         <TableCell padding="checkbox">
-                          <Checkbox checked={selection.has(row.id)} onChange={() => toggleSelect(row.id)} />
+                          <Checkbox checked={selection.has(row.id)} onChange={()=>toggleSelect(row.id)}/>
                         </TableCell>
                         <TableCell>{row.email}</TableCell>
                         <TableCell>{row.name}</TableCell>
                         <TableCell>{row.phone}</TableCell>
                         <TableCell>{row.notes}</TableCell>
                         <TableCell>
-                          <IconButton size="small" onClick={() => deleteRow(row.id)}>
-                            <DeleteIcon />
-                          </IconButton>
+                          <IconButton size="small" onClick={()=>deleteRow(row.id)}><DeleteIcon/></IconButton>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -296,44 +272,25 @@ function BdEmails() {
                 </Table>
               </TableContainer>
 
-              <Box sx={{ mt: 3, maxWidth: 600, display: "flex", flexDirection: "column", gap: 2 }}>
+              <Box sx={{mt:3,maxWidth:600,display:"flex",flexDirection:"column",gap:2}}>
                 <Typography variant="h6">
-                  Enviar mailing{" "}
-                  {selection.size ? `(seleccionados: ${selection.size})` : "(toda la base)"}
+                  Enviar mailing {selection.size?`(seleccionados: ${selection.size})`:"(toda la base)"}
                 </Typography>
-                <TextField
-                  label="Asunto"
-                  value={mail.subject}
-                  onChange={(e) => setMail({ ...mail, subject: e.target.value })}
-                />
-                <TextField
-                  label="Cuerpo"
-                  multiline
-                  rows={6}
-                  value={mail.body}
-                  onChange={(e) => setMail({ ...mail, body: e.target.value })}
-                />
-                <Button variant="contained" startIcon={<SendIcon />} onClick={sendBulk}>
-                  Enviar
-                </Button>
+                <TextField label="Asunto" value={mail.subject} onChange={e=>setMail({...mail,subject:e.target.value})}/>
+                <TextField label="Cuerpo" multiline rows={6} value={mail.body} onChange={e=>setMail({...mail,body:e.target.value})}/>
+                <Button variant="contained" startIcon={<SendIcon/>} onClick={sendBulk}>Enviar</Button>
               </Box>
             </>
           )}
         </Paper>
 
-        <Snackbar
-          open={snack.open}
-          autoHideDuration={4000}
-          onClose={() => setSnack((prev) => ({ ...prev, open: false }))}
-        >
-          <Alert severity={snack.sev} variant="filled" sx={{ width: "100%" }}>
-            {snack.msg}
-          </Alert>
+        <Snackbar open={snack.open} autoHideDuration={4000} onClose={()=>setSnack(prev=>({...prev,open:false}))}>
+          <Alert severity={snack.sev} variant="filled" sx={{width:"100%"}}>{snack.msg}</Alert>
         </Snackbar>
       </Container>
     </DashboardLayout>
   );
 }
 
-// Deshabilita SSR para evitar errores de hidración con localStorage/token
+// Disable SSR to avoid hydration/auth mismatches
 export default dynamic(() => Promise.resolve(BdEmails), { ssr: false });
