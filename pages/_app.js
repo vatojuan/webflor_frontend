@@ -1,5 +1,5 @@
 // pages/_app.js
-import '@mui/x-data-grid/index.css';    // ← Import de estilos globales de DataGrid
+import '@mui/x-data-grid/dist/index.css';     // ← Import de estilos globales de DataGrid
 import '../styles/globals.css';
 import { useState, useMemo, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
