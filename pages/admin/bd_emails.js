@@ -173,7 +173,7 @@ function BdEmails() {
     }
   };
 
-  if (authLoading || !user) return null; // espera a auth
+  if (authLoading || !user) return null;
 
   return (
     <DashboardLayout>
@@ -195,14 +195,14 @@ function BdEmails() {
               {files.length > 0 && (
                 <Box mt={2}>
                   <List dense>
-                    {files.map((f) => <ListItem key={f.name}><ListItemText primary={f.name}/></ListItem>)}
+                    {files.map((f) => <ListItem key={f.name}><ListItemText primary={f.name} /></ListItem>)}
                   </List>
                   <Button onClick={uploadFiles} variant="contained">Procesar</Button>
                 </Box>
               )}
               {uploading && (
                 <Box mt={2}>
-                  <LinearProgress variant="determinate" value={progress}/> <Typography>{progress}%</Typography>
+                  <LinearProgress variant="determinate" value={progress} /> <Typography>{progress}%</Typography>
                 </Box>
               )}
               {results.length > 0 && (
@@ -213,10 +213,12 @@ function BdEmails() {
                   </Box>
                   {results.map((r, i) => (
                     <Card key={i} sx={{ my: 2 }}>
-                      <CardHeader title={`${r.file} – ${r.email||"sin email"}`} subheader={r.status}/>
+                      <CardHeader title={`${r.file} – ${r.email || "sin email"}`} subheader={r.status} />
                       <Divider/>
                       <CardContent>
-                        <List dense>{r.logs.map((l,idx)=><ListItem key={idx}><ListItemText primary={l}/></ListItem>)}</List>
+                        <List dense>
+                          {r.logs.map((l, idx) => <ListItem key={idx}><ListItemText primary={l}/></ListItem>)}
+                        </List>
                       </CardContent>
                     </Card>
                   ))}
@@ -226,19 +228,19 @@ function BdEmails() {
           )}
 
           {tab === 1 && (
-            <Box component="form" sx={{display:"flex",flexDirection:"column",gap:2,maxWidth:400}}>
-              <TextField label="E-mail*" value={manual.email} onChange={e=>setManual({...manual,email:e.target.value})}/>
-              <TextField label="Nombre"  value={manual.name} onChange={e=>setManual({...manual,name:e.target.value})}/>
-              <TextField label="Teléfono" value={manual.phone} onChange={e=>setManual({...manual,phone:e.target.value})}/>
-              <TextField label="Notas" multiline rows={3} value={manual.notes} onChange={e=>setManual({...manual,notes:e.target.value})}/>
+            <Box component="form" sx={{ display:"flex", flexDirection:"column", gap:2, maxWidth:400 }}>
+              <TextField label="E-mail*" value={manual.email} onChange={e => setManual({...manual,email:e.target.value})}/>
+              <TextField label="Nombre"  value={manual.name} onChange={e => setManual({...manual,name:e.target.value})}/>
+              <TextField label="Teléfono" value={manual.phone} onChange={e => setManual({...manual,phone:e.target.value})}/>
+              <TextField label="Notas" multiline rows={3} value={manual.notes} onChange={e => setManual({...manual,notes:e.target.value})}/>
               <Button variant="contained" onClick={addManual}>Guardar</Button>
             </Box>
           )}
 
           {tab === 2 && (
             <>
-              <Box sx={{mb:2,display:"flex",gap:2}}>
-                <TextField label="Buscar e-mail / nombre" size="small" value={search} onChange={e=>setSearch(e.target.value)}/>
+              <Box sx={{ mb:2, display:"flex", gap:2 }}>
+                <TextField label="Buscar e-mail / nombre" size="small" value={search} onChange={e => setSearch(e.target.value)}/>
                 <Button variant="contained" onClick={fetchRows}>Buscar</Button>
               </Box>
               <TableContainer component={Paper} variant="outlined">
@@ -254,17 +256,17 @@ function BdEmails() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {rows.map(row=>(
+                    {rows.map(row => (
                       <TableRow key={row.id} hover>
                         <TableCell padding="checkbox">
-                          <Checkbox checked={selection.has(row.id)} onChange={()=>toggleSelect(row.id)}/>
+                          <Checkbox checked={selection.has(row.id)} onChange={() => toggleSelect(row.id)}/>
                         </TableCell>
                         <TableCell>{row.email}</TableCell>
                         <TableCell>{row.name}</TableCell>
                         <TableCell>{row.phone}</TableCell>
                         <TableCell>{row.notes}</TableCell>
                         <TableCell>
-                          <IconButton size="small" onClick={()=>deleteRow(row.id)}><DeleteIcon/></IconButton>
+                          <IconButton size="small" onClick={() => deleteRow(row.id)}><DeleteIcon/></IconButton>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -272,20 +274,20 @@ function BdEmails() {
                 </Table>
               </TableContainer>
 
-              <Box sx={{mt:3,maxWidth:600,display:"flex",flexDirection:"column",gap:2}}>
+              <Box sx={{ mt:3, maxWidth:600, display:"flex", flexDirection:"column", gap:2 }}>
                 <Typography variant="h6">
-                  Enviar mailing {selection.size?`(seleccionados: ${selection.size})`:"(toda la base)"}
+                  Enviar mailing {selection.size ? `(seleccionados: ${selection.size})` : "(toda la base)"}
                 </Typography>
-                <TextField label="Asunto" value={mail.subject} onChange={e=>setMail({...mail,subject:e.target.value})}/>
-                <TextField label="Cuerpo" multiline rows={6} value={mail.body} onChange={e=>setMail({...mail,body:e.target.value})}/>
-                <Button variant="contained" startIcon={<SendIcon/>} onClick={sendBulk}>Enviar</Button>
+                <TextField label="Asunto" value={mail.subject} onChange={e => setMail({...mail,subject:e.target.value})}/>
+                <TextField label="Cuerpo" multiline rows={6} value={mail.body} onChange={e => setMail({...mail,body:e.target.value})}/>
+                <Button variant="contained" startIcon={<SendIcon />} onClick={sendBulk}>Enviar</Button>
               </Box>
             </>
           )}
         </Paper>
 
-        <Snackbar open={snack.open} autoHideDuration={4000} onClose={()=>setSnack(prev=>({...prev,open:false}))}>
-          <Alert severity={snack.sev} variant="filled" sx={{width:"100%"}}>{snack.msg}</Alert>
+        <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack(prev => ({ ...prev, open: false }))}>
+          <Alert severity={snack.sev} variant="filled" sx={{ width:"100%" }}>{snack.msg}</Alert>
         </Snackbar>
       </Container>
     </DashboardLayout>
