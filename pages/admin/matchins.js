@@ -29,10 +29,21 @@ export default function Matchins() {
   const [loading, setLoading] = useState(true);
   const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
 
+  const getAuthHeader = () => {
+    // Asumimos que el token de admin se almacena en localStorage bajo "adminToken"
+    const token = localStorage.getItem("adminToken");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/match/admin`);
+      const res = await fetch(`${API}/api/match/admin`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+        },
+      });
       if (!res.ok) throw new Error("Error al cargar datos");
       const data = await res.json();
 
@@ -42,7 +53,9 @@ export default function Matchins() {
         jobTitle: m.job.title,
         userEmail: m.user.email,
         score: (m.score * 100).toFixed(1) + " %",
-        sentAt: new Date(m.sent_at).toLocaleString("es-AR"),
+        sentAt: m.sent_at
+          ? new Date(m.sent_at).toLocaleString("es-AR")
+          : "—",
         status: m.status,
         jobId: m.job.id, // asumimos que viene job.id
       }));
@@ -62,10 +75,16 @@ export default function Matchins() {
     try {
       const res = await fetch(`${API}/api/match/resend/${matchId}`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+        },
       });
       if (res.ok) {
         setSnack({ open: true, msg: "Email reenviado", sev: "success" });
       } else {
+        const err = await res.json();
+        console.error("Error reenviar:", err);
         throw new Error();
       }
     } catch {
