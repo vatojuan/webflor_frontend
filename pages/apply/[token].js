@@ -15,38 +15,27 @@ export default function ApplyPage() {
   const [status, setStatus] = useState("loading");
 
   useEffect(() => {
-    if (!token || typeof token !== "string") return;
+    if (!token) return;
 
-    const checkToken = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/proposals/apply/${token}`);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/apply/${token}`)
+      .then((res) => {
         if (res.ok) {
           setStatus("success");
         } else {
           setStatus("error");
         }
-      } catch (err) {
-        setStatus("error");
-      }
-    };
-
-    checkToken();
+      })
+      .catch(() => setStatus("error"));
   }, [token]);
 
-  if (status === "loading") {
-    return (
-      <Container maxWidth="sm" sx={{ mt: 8, textAlign: "center", minHeight: "60vh" }}>
+  return (
+    <Container maxWidth="sm" sx={{ mt: 8, textAlign: "center", minHeight: "60vh" }}>
+      {status === "loading" ? (
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <CircularProgress />
           <Typography sx={{ mt: 2 }}>Confirmando tu postulación…</Typography>
         </Box>
-      </Container>
-    );
-  }
-
-  return (
-    <Container maxWidth="sm" sx={{ mt: 8, textAlign: "center", minHeight: "60vh" }}>
-      {status === "success" ? (
+      ) : status === "success" ? (
         <Alert severity="success">
           ¡Tu postulación fue confirmada correctamente! Gracias por tu interés.
         </Alert>
