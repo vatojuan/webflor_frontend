@@ -1,4 +1,4 @@
-// pages/admin/templates.js               ⬅️ (renómbralo si el nombre de ruta es otro)
+// pages/admin/templates.js
 import React, { useState, useEffect, useRef } from "react";
 import {
   Container, Typography, Table, TableHead, TableBody, TableRow, TableCell,
@@ -138,7 +138,7 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
   return (
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Container sx={{ mt:4 }}>
-        <Typography variant="h4" gutterBottom>Plantillas de Propuesta</Typography>
+        <Typography variant="h4" gutterBottom>Plantillas de Propuesta / Matching</Typography>
 
         <Button variant="contained" onClick={handleOpenNew} sx={{ mb:2 }}>
           Nueva Plantilla
@@ -159,7 +159,13 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
               {templates.map(tpl=>(
                 <TableRow key={tpl.id}>
                   <TableCell>{tpl.name}</TableCell>
-                  <TableCell>{tpl.type==="automatic"?"Automática":"Manual"}</TableCell>
+                  <TableCell>
+                    {{
+                      automatic: "Automática",
+                      manual:    "Manual",
+                      empleado:  "Empleado"
+                    }[tpl.type] || tpl.type}
+                  </TableCell>
                   <TableCell>{tpl.subject}</TableCell>
                   <TableCell>
                     {tpl.is_default
@@ -193,6 +199,7 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
               <Select labelId="type-label" label="Tipo" defaultValue="automatic" inputRef={typeRef}>
                 <MenuItem value="automatic">Automática</MenuItem>
                 <MenuItem value="manual">Manual</MenuItem>
+                <MenuItem value="empleado">Empleado</MenuItem>
               </Select>
             </FormControl>
 
@@ -200,7 +207,10 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
 
             <FormControlLabel
               control={
-                <Checkbox inputRef={defaultRef} disabled={editing?.is_default} />
+                <Checkbox
+                  inputRef={defaultRef}
+                  disabled={editing?.is_default && editing?.type === typeRef.current?.value}
+                />
               }
               label="Predeterminada"
             />
