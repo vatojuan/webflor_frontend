@@ -1,4 +1,4 @@
-// /pages/apply/[token].js
+// pages/apply/[token].js
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import {
@@ -12,30 +12,30 @@ import {
 export default function ApplyPage() {
   const router = useRouter();
   const { token } = router.query;
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
-  );
+  const [status, setStatus] = useState("loading");
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || typeof token !== "string") return;
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/apply/${token}`)
-      .then((res) => {
+    const checkToken = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/proposals/apply/${token}`);
         if (res.ok) {
           setStatus("success");
         } else {
-          throw new Error();
+          setStatus("error");
         }
-      })
-      .catch(() => setStatus("error"));
+      } catch (err) {
+        setStatus("error");
+      }
+    };
+
+    checkToken();
   }, [token]);
 
   if (status === "loading") {
     return (
-      <Container
-        maxWidth="sm"
-        sx={{ mt: 8, textAlign: "center", minHeight: "60vh" }}
-      >
+      <Container maxWidth="sm" sx={{ mt: 8, textAlign: "center", minHeight: "60vh" }}>
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <CircularProgress />
           <Typography sx={{ mt: 2 }}>Confirmando tu postulación…</Typography>
