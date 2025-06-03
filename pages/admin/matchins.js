@@ -30,7 +30,6 @@ export default function Matchins() {
   const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
 
   const getAuthHeader = () => {
-    // Asumimos que el token de admin se almacena en localStorage bajo "adminToken"
     const token = localStorage.getItem("adminToken");
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
@@ -47,18 +46,17 @@ export default function Matchins() {
       if (!res.ok) throw new Error("Error al cargar datos");
       const data = await res.json();
 
-      // Mapear la respuesta a nuestro formato de filas
-      const mapped = data.map((m) => ({
-        id: m.id,
-        jobTitle: m.job.title,
-        userEmail: m.user.email,
-        score: (m.score * 100).toFixed(1) + " %",
-        sentAt: m.sent_at
-          ? new Date(m.sent_at).toLocaleString("es-AR")
-          : "—",
-        status: m.status,
-        jobId: m.job.id, // asumimos que viene job.id
-      }));
+      const mapped = data
+        .filter((m) => m.score >= 0.85) // solo ≥85%
+        .map((m) => ({
+          id: m.id,
+          jobTitle: m.job.title,
+          userEmail: m.user.email,
+          score: (m.score * 100).toFixed(1) + " %",
+          sentAt: m.sent_at ? new Date(m.sent_at).toLocaleString("es-AR") : "—",
+          status: m.status,
+          jobId: m.job.id,
+        }));
       setRows(mapped);
     } catch (e) {
       console.error(e);
@@ -125,7 +123,7 @@ export default function Matchins() {
                       <Chip
                         label={row.score}
                         color={
-                          Number(row.score.replace(" %", "")) > 85
+                          Number(row.score.replace(" %", "")) >= 85
                             ? "success"
                             : "default"
                         }
@@ -140,7 +138,7 @@ export default function Matchins() {
                           size="small"
                           variant="outlined"
                           onClick={() =>
-                            window.open(`/admin/ofertas/${row.jobId}`, "_blank")
+                            window.open(`/admin/mis_ofertas`, "_blank")
                           }
                         >
                           Ver oferta

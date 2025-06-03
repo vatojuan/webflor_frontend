@@ -1,5 +1,5 @@
 // pages/admin/mis_ofertas.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Container,
   Typography,
@@ -22,6 +22,7 @@ import {
   CircularProgress,
   Chip,
 } from "@mui/material";
+import { useRouter } from "next/router";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
@@ -35,9 +36,13 @@ const fmtLabel = (l) => (l === "manual" ? "Manual" : "Automático");
 export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const { user, loading } = useAdminAuth();
   const [offers, setOffers] = useState([]);
-  const [sel, setSel]       = useState(null);
-  const [busy, setBusy]     = useState(false);
-  const [snack, setSnack]   = useState({ open: false, msg: "", sev: "success" });
+  const [sel, setSel] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
+
+  const { query, replace } = useRouter();
+  const highlightId = useRef(Number(query.jobId) || null);
+  const tableContainerRef = useRef(null);
 
   /* ── token / headers ── */
   const token =
@@ -68,9 +73,26 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
 
   useEffect(fetchOffers, [user, token]);
 
+  /* ── scroll y resaltar ── */
+  useEffect(() => {
+    if (
+      !busy &&
+      offers.length > 0 &&
+      highlightId.current &&
+      tableContainerRef.current
+    ) {
+      // Buscar la fila y hacer scroll
+      const row = document.getElementById(`offer-row-${highlightId.current}`);
+      if (row) {
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      // Limpiar el parámetro para que no se vuelva a resaltar
+      replace("/admin/mis_ofertas", undefined, { shallow: true });
+    }
+  }, [busy, offers, replace]);
+
   /* ── helpers ── */
-  const updateSel = (k, v) =>
-    setSel((old) => ({ ...old, [k]: v }));
+  const updateSel = (k, v) => setSel((old) => ({ ...old, [k]: v }));
 
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta oferta?")) return;
@@ -83,6 +105,8 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
       if (!r.ok) throw new Error((await r.json()).detail ?? `HTTP ${r.status}`);
       setOffers((prev) => prev.filter((o) => o.id !== id));
       setSnack({ open: true, msg: "Oferta eliminada", sev: "success" });
+      // Si era la resaltada, limpiar
+      if (highlightId.current === id) highlightId.current = null;
     } catch (e) {
       setSnack({ open: true, msg: e.message, sev: "error" });
     }
@@ -132,7 +156,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
           Mis ofertas de trabajo
         </Typography>
 
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} ref={tableContainerRef}>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -162,12 +186,17 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
               {offers.map((o) => {
                 const email = o.contactEmail ?? o.contact_email ?? "—";
                 const phone = o.contactPhone ?? o.contact_phone ?? "—";
+                const isHighlighted = o.id === highlightId.current;
                 return (
                   <TableRow
                     key={o.id}
+                    id={`offer-row-${o.id}`}
                     sx={{
-                      backgroundColor:
-                        o.userId === user.id ? "#FFFDE7" : "inherit",
+                      backgroundColor: isHighlighted
+                        ? "#fff9c4"
+                        : o.userId === user.id
+                        ? "#FFFDE7"
+                        : "inherit",
                     }}
                   >
                     <TableCell>{o.title}</TableCell>
