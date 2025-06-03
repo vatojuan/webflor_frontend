@@ -47,3 +47,10 @@ export default function ApplyPage() {
     </Container>
   );
 }
+
+// 👉 Solución para evitar errores de prerendering en el build de Vercel
+export const getServerSideProps = () => {
+  return {
+    props: {},
+  };
+};
