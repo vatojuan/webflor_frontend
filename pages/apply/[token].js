@@ -12,14 +12,23 @@ import {
 export default function ApplyPage() {
   const router = useRouter();
   const { token } = router.query;
-  const [status, setStatus] = useState("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading"
+  );
 
   useEffect(() => {
     if (!token) return;
 
+    // Llamamos al endpoint de FastAPI que ahora devuelve { success: true, token: "<JWT>" }
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/apply/${token}`)
-      .then((res) => {
-        if (res.ok) {
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error("Error al confirmar postulación");
+        }
+        const data = await res.json();
+        if (data.success && data.token) {
+          // Guardamos el JWT del candidato en localStorage
+          localStorage.setItem("userToken", data.token);
           setStatus("success");
         } else {
           setStatus("error");
@@ -28,13 +37,13 @@ export default function ApplyPage() {
       .catch(() => setStatus("error"));
   }, [token]);
 
-  // → Cuando el estado pasa a “success”, esperamos 2 segundos y redirigimos
+  // Cuando status cambie a "success", esperamos 2 segundos y redirigimos a /job-list
   useEffect(() => {
     if (status === "success") {
-      const t = setTimeout(() => {
+      const timeout = setTimeout(() => {
         window.location.href = "https://www.fapmendoza.com/job-list";
       }, 2000);
-      return () => clearTimeout(t);
+      return () => clearTimeout(timeout);
     }
   }, [status]);
 
