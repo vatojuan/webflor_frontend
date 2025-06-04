@@ -28,15 +28,15 @@ export default function ApplyPage() {
       .catch(() => setStatus("error"));
   }, [token]);
 
-  // Si la postulación fue exitosa, redirigimos al listado de ofertas en 3 segundos
+  // → Cuando el estado pasa a “success”, esperamos 2 segundos y redirigimos
   useEffect(() => {
     if (status === "success") {
       const t = setTimeout(() => {
-        router.push("/job-list");
-      }, 3000);
+        window.location.href = "https://www.fapmendoza.com/job-list";
+      }, 2000);
       return () => clearTimeout(t);
     }
-  }, [status, router]);
+  }, [status]);
 
   return (
     <Container
@@ -57,7 +57,7 @@ export default function ApplyPage() {
       ) : status === "success" ? (
         <Alert severity="success">
           ¡Tu postulación fue confirmada correctamente! <br />
-          Te redirigiremos al listado de ofertas en breve…
+          Serás redirigido al listado de ofertas…
         </Alert>
       ) : (
         <Alert severity="error">
@@ -69,7 +69,7 @@ export default function ApplyPage() {
   );
 }
 
-// 👉 Evitar el error de prerendering en Vercel
+// Evitamos prerendering en Vercel
 export const getServerSideProps = () => {
   return {
     props: {},
