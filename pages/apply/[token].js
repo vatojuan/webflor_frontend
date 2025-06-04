@@ -11,9 +11,7 @@ import {
 export default function ApplyPage() {
   const router = useRouter();
   const { token } = router.query;
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
-  );
+  const [status, setStatus] = useState("loading"); // "loading" | "success" | "error"
 
   useEffect(() => {
     if (!router.isReady || !token) return;
@@ -77,7 +75,7 @@ export default function ApplyPage() {
   );
 }
 
-// Evitamos prerendering en Vercel
+// Evitamos prerrendering en Vercel
 export const getServerSideProps = () => {
   return {
     props: {},
