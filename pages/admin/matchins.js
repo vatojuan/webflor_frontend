@@ -46,17 +46,17 @@ export default function Matchins() {
       if (!res.ok) throw new Error("Error al cargar datos");
       const data = await res.json();
 
-      const mapped = data
-        .filter((m) => m.score >= 0.85) // solo ≥85%
-        .map((m) => ({
-          id: m.id,
-          jobTitle: m.job.title,
-          userEmail: m.user.email,
-          score: (m.score * 100).toFixed(1) + " %",
-          sentAt: m.sent_at ? new Date(m.sent_at).toLocaleString("es-AR") : "—",
-          status: m.status,
-          jobId: m.job.id,
-        }));
+      // Ya en el backend devolvemos únicamente score ≥ 0.80,
+      // así que aquí no hace falta filtrar nada. Mapeamos directamente:
+      const mapped = data.map((m) => ({
+        id: m.id,
+        jobTitle: m.job.title,
+        userEmail: m.user.email,
+        score: (m.score * 100).toFixed(1) + " %",
+        sentAt: m.sent_at ? new Date(m.sent_at).toLocaleString("es-AR") : "—",
+        status: m.status,
+        jobId: m.job.id,
+      }));
       setRows(mapped);
     } catch (e) {
       console.error(e);
