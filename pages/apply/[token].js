@@ -1,4 +1,5 @@
 // pages/apply/[token].js
+
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import {
@@ -12,16 +13,14 @@ import {
 export default function ApplyPage() {
   const router = useRouter();
   const { token } = router.query;
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
-  );
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
   useEffect(() => {
     if (!token) return;
 
-    // Llamamos al endpoint de FastAPI que ahora devuelve { success: true, token: "<JWT>" }
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/apply/${token}`)
-      .then(async (res) => {
+    (async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/apply/${token}`);
         if (!res.ok) {
           throw new Error("Error al confirmar postulación");
         }
@@ -33,17 +32,19 @@ export default function ApplyPage() {
         } else {
           setStatus("error");
         }
-      })
-      .catch(() => setStatus("error"));
+      } catch {
+        setStatus("error");
+      }
+    })();
   }, [token]);
 
-  // Cuando status cambie a "success", esperamos 2 segundos y redirigimos a /job-list
+  // Redirigir a /job-list 2 segundos después de éxito
   useEffect(() => {
     if (status === "success") {
-      const timeout = setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         window.location.href = "https://www.fapmendoza.com/job-list";
       }, 2000);
-      return () => clearTimeout(timeout);
+      return () => clearTimeout(timeoutId);
     }
   }, [status]);
 
@@ -53,13 +54,7 @@ export default function ApplyPage() {
       sx={{ mt: 8, textAlign: "center", minHeight: "60vh" }}
     >
       {status === "loading" ? (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <CircularProgress />
           <Typography sx={{ mt: 2 }}>Confirmando tu postulación…</Typography>
         </Box>
@@ -70,8 +65,7 @@ export default function ApplyPage() {
         </Alert>
       ) : (
         <Alert severity="error">
-          Hubo un problema al confirmar tu postulación. El enlace ya se usó o es
-          inválido.
+          Hubo un problema al confirmar tu postulación. El enlace ya se usó o es inválido.
         </Alert>
       )}
     </Container>
@@ -80,7 +74,5 @@ export default function ApplyPage() {
 
 // Evitamos prerendering en Vercel
 export const getServerSideProps = () => {
-  return {
-    props: {},
-  };
+  return { props: {} };
 };
