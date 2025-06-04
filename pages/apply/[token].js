@@ -16,7 +16,7 @@ export default function ApplyPage() {
   );
 
   useEffect(() => {
-    if (!token) return;
+    if (!router.isReady || !token) return;
 
     // Llamamos al endpoint de FastAPI que crea la postulación y devuelve { success: true, token: "<JWT>", jobId }
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/job/apply/${token}`)
@@ -34,7 +34,7 @@ export default function ApplyPage() {
         }
       })
       .catch(() => setStatus("error"));
-  }, [token]);
+  }, [router.isReady, token]);
 
   // → Cuando el estado pasa a “success”, esperamos 2 segundos y redirigimos
   useEffect(() => {
