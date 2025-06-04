@@ -18,8 +18,8 @@ export default function ApplyPage() {
   useEffect(() => {
     if (!token) return;
 
-    // Llamamos al endpoint de FastAPI que ahora devuelve { success: true, token: "<JWT>" }
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/apply/${token}`)
+    // Llamamos al endpoint de FastAPI que crea la postulación y devuelve { success: true, token: "<JWT>", jobId }
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/job/apply/${token}`)
       .then(async (res) => {
         if (!res.ok) {
           throw new Error("Error al confirmar postulación");
@@ -40,11 +40,11 @@ export default function ApplyPage() {
   useEffect(() => {
     if (status === "success") {
       const t = setTimeout(() => {
-        window.location.href = "https://www.fapmendoza.com/job-list";
+        router.push("/job-list");
       }, 2000);
       return () => clearTimeout(t);
     }
-  }, [status]);
+  }, [status, router]);
 
   return (
     <Container
