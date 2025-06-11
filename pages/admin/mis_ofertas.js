@@ -26,11 +26,9 @@ import { useRouter } from "next/router";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
 
-const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString("es-AR") : "Sin fecha";
+const fmtDate  = (d) => (d ? new Date(d).toLocaleDateString("es-AR") : "Sin fecha");
 const fmtLabel = (l) => (l === "manual" ? "Manual" : "Automático");
 
 export default function MisOfertas({ toggleDarkMode, currentMode }) {
@@ -44,7 +42,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const highlightId = useRef(Number(query.jobId) || null);
   const tableContainerRef = useRef(null);
 
-  /* ── token / headers ── */
+  // ── token / headers ──
   const token =
     typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
   const headers = useMemo(
@@ -55,57 +53,55 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     [token]
   );
 
-  /* ── obtener ofertas ── */
+  // ── obtener ofertas ──
   const fetchOffers = () => {
     if (!user || !token) return;
     setBusy(true);
-    fetch(`${API_URL}/api/job/admin_offers`)
+    fetch(`${API_URL}/api/job/admin_offers`, { headers })
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
-      .then((j) => setOffers(Array.isArray(j.offers) ? j.offers : []))
-      .catch(() =>
-        setSnack({ open: true, msg: "Error obteniendo ofertas", sev: "error" })
-      )
+      .then((json) => {
+        // asumimos que retorna { offers: [...] }
+        setOffers(Array.isArray(json.offers) ? json.offers : []);
+      })
+      .catch((err) => {
+        console.error("Error obteniendo ofertas:", err);
+        setSnack({ open: true, msg: "Error obteniendo ofertas", sev: "error" });
+      })
       .finally(() => setBusy(false));
   };
 
   useEffect(fetchOffers, [user, token]);
 
-  /* ── scroll y resaltar ── */
+  // ── scroll y resaltar ──
   useEffect(() => {
-    if (
-      !busy &&
-      offers.length > 0 &&
-      highlightId.current &&
-      tableContainerRef.current
-    ) {
+    if (!busy && offers.length && highlightId.current && tableContainerRef.current) {
       const row = document.getElementById(`offer-row-${highlightId.current}`);
-      if (row) {
-        row.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
       replace("/admin/mis_ofertas", undefined, { shallow: true });
     }
   }, [busy, offers, replace]);
 
-  /* ── helpers ── */
+  // ── helpers ──
   const updateSel = (k, v) => setSel((old) => ({ ...old, [k]: v }));
 
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta oferta?")) return;
     try {
-      const r = await fetch(`${API_URL}/api/admin/job/delete`, {
+      const r = await fetch(`${API_URL}/api/job/delete-admin`, {
         method: "DELETE",
         headers,
         body: JSON.stringify({ jobId: id }),
       });
-      if (!r.ok) throw new Error((await r.json()).detail ?? `HTTP ${r.status}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setOffers((prev) => prev.filter((o) => o.id !== id));
       setSnack({ open: true, msg: "Oferta eliminada", sev: "success" });
       if (highlightId.current === id) highlightId.current = null;
     } catch (e) {
-      setSnack({ open: true, msg: e.message, sev: "error" });
+      console.error("Error eliminando oferta:", e);
+      setSnack({ open: true, msg: "Error eliminando oferta", sev: "error" });
     }
   };
 
@@ -119,22 +115,23 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
       return;
     }
     try {
-      const r = await fetch(`${API_URL}/api/admin/job/update`, {
+      const r = await fetch(`${API_URL}/api/job/update-admin`, {
         method: "PUT",
         headers,
         body: JSON.stringify(sel),
       });
-      if (!r.ok) throw new Error((await r.json()).detail ?? `HTTP ${r.status}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const upd = await r.json();
       setOffers((prev) => prev.map((o) => (o.id === upd.id ? upd : o)));
       setSnack({ open: true, msg: "Oferta actualizada", sev: "success" });
       setSel(null);
     } catch (e) {
-      setSnack({ open: true, msg: e.message, sev: "error" });
+      console.error("Error actualizando oferta:", e);
+      setSnack({ open: true, msg: "Error actualizando oferta", sev: "error" });
     }
   };
 
-  /* ── loading ── */
+  // ── loading ──
   if (loading || busy)
     return (
       <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
@@ -145,7 +142,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     );
   if (!user || !token) return null;
 
-  /* ── UI ── */
+  // ── UI ──
   return (
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Container sx={{ mt: 4 }}>
@@ -173,72 +170,73 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {offers.length === 0 && (
+              {offers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} align="center">
                     No hay ofertas
                   </TableCell>
                 </TableRow>
+              ) : (
+                offers.map((o) => {
+                  const email = o.contactEmail ?? o.contact_email ?? "—";
+                  const phone = o.contactPhone ?? o.contact_phone ?? "—";
+                  const isHighlight = o.id === highlightId.current;
+                  return (
+                    <TableRow
+                      key={o.id}
+                      id={`offer-row-${o.id}`}
+                      sx={{
+                        backgroundColor: isHighlight
+                          ? "#fff9c4"
+                          : o.userId === user.id
+                          ? "#FFFDE7"
+                          : "inherit",
+                      }}
+                    >
+                      <TableCell>{o.title}</TableCell>
+                      <TableCell>{o.description}</TableCell>
+                      <TableCell>{o.requirements}</TableCell>
+                      <TableCell>{fmtDate(o.expirationDate)}</TableCell>
+                      <TableCell>
+                        <Chip label={fmtLabel(o.label)} size="small" />
+                      </TableCell>
+                      <TableCell>{o.source ?? "—"}</TableCell>
+                      <TableCell>{email}</TableCell>
+                      <TableCell>{phone}</TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          sx={{ mr: 1 }}
+                          onClick={() =>
+                            setSel({
+                              ...o,
+                              contactEmail: email === "—" ? "" : email,
+                              contactPhone: phone === "—" ? "" : phone,
+                            })
+                          }
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          onClick={() => handleDelete(o.id)}
+                        >
+                          Eliminar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
-              {offers.map((o) => {
-                const email = o.contactEmail ?? o.contact_email ?? "—";
-                const phone = o.contactPhone ?? o.contact_phone ?? "—";
-                const isHighlighted = o.id === highlightId.current;
-                return (
-                  <TableRow
-                    key={o.id}
-                    id={`offer-row-${o.id}`}
-                    sx={{
-                      backgroundColor: isHighlighted
-                        ? "#fff9c4"
-                        : o.userId === user.id
-                        ? "#FFFDE7"
-                        : "inherit",
-                    }}
-                  >
-                    <TableCell>{o.title}</TableCell>
-                    <TableCell>{o.description}</TableCell>
-                    <TableCell>{o.requirements}</TableCell>
-                    <TableCell>{fmtDate(o.expirationDate)}</TableCell>
-                    <TableCell>
-                      <Chip label={fmtLabel(o.label)} size="small" />
-                    </TableCell>
-                    <TableCell>{o.source ?? "—"}</TableCell>
-                    <TableCell>{email}</TableCell>
-                    <TableCell>{phone}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        sx={{ mr: 1 }}
-                        onClick={() =>
-                          setSel({
-                            ...o,
-                            contactEmail: email === "—" ? "" : email,
-                            contactPhone: phone === "—" ? "" : phone,
-                          })
-                        }
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        onClick={() => handleDelete(o.id)}
-                      >
-                        Eliminar
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
             </TableBody>
           </Table>
         </TableContainer>
       </Container>
 
-      {/* Dialogo */}
+      {/* Dialogo edición */}
       <Dialog open={Boolean(sel)} onClose={() => setSel(null)} fullWidth>
         <DialogTitle>Editar oferta</DialogTitle>
         <DialogContent dividers>
@@ -271,9 +269,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
                 type="date"
                 fullWidth
                 InputLabelProps={{ shrink: true }}
-                value={
-                  sel.expirationDate ? sel.expirationDate.slice(0, 10) : ""
-                }
+                value={sel.expirationDate?.slice(0, 10) || ""}
                 onChange={(e) => updateSel("expirationDate", e.target.value)}
               />
               <TextField
