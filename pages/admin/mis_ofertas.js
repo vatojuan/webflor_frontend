@@ -59,7 +59,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const fetchOffers = () => {
     if (!user || !token) return;
     setBusy(true);
-    fetch(`${API_URL}/api/job/admin_offers`, { headers })
+    fetch(`${API_URL}/api/admin/job/offers`, { headers })
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -81,12 +81,10 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
       highlightId.current &&
       tableContainerRef.current
     ) {
-      // Buscar la fila y hacer scroll
       const row = document.getElementById(`offer-row-${highlightId.current}`);
       if (row) {
         row.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-      // Limpiar el parámetro para que no se vuelva a resaltar
       replace("/admin/mis_ofertas", undefined, { shallow: true });
     }
   }, [busy, offers, replace]);
@@ -97,7 +95,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta oferta?")) return;
     try {
-      const r = await fetch(`${API_URL}/api/job/delete-admin`, {
+      const r = await fetch(`${API_URL}/api/admin/job/delete`, {
         method: "DELETE",
         headers,
         body: JSON.stringify({ jobId: id }),
@@ -105,7 +103,6 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
       if (!r.ok) throw new Error((await r.json()).detail ?? `HTTP ${r.status}`);
       setOffers((prev) => prev.filter((o) => o.id !== id));
       setSnack({ open: true, msg: "Oferta eliminada", sev: "success" });
-      // Si era la resaltada, limpiar
       if (highlightId.current === id) highlightId.current = null;
     } catch (e) {
       setSnack({ open: true, msg: e.message, sev: "error" });
@@ -122,7 +119,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
       return;
     }
     try {
-      const r = await fetch(`${API_URL}/api/job/update-admin`, {
+      const r = await fetch(`${API_URL}/api/admin/job/update`, {
         method: "PUT",
         headers,
         body: JSON.stringify(sel),
