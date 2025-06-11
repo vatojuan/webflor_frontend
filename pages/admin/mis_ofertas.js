@@ -1,4 +1,5 @@
 // pages/admin/mis_ofertas.js
+
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Container,
@@ -43,8 +44,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const tableContainerRef = useRef(null);
 
   // ── token / headers ──
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
+  const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
   const headers = useMemo(
     () => ({
       "Content-Type": "application/json",
@@ -59,11 +59,12 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     setBusy(true);
     fetch(`${API_URL}/api/job/admin_offers`, { headers })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        if (!r.ok) {
+          throw new Error(`HTTP ${r.status}`);
+        }
         return r.json();
       })
       .then((json) => {
-        // asumimos que retorna { offers: [...] }
         setOffers(Array.isArray(json.offers) ? json.offers : []);
       })
       .catch((err) => {
@@ -90,12 +91,12 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta oferta?")) return;
     try {
-      const r = await fetch(`${API_URL}/api/job/delete-admin`, {
+      const res = await fetch(`${API_URL}/api/job/delete-admin`, {
         method: "DELETE",
         headers,
         body: JSON.stringify({ jobId: id }),
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setOffers((prev) => prev.filter((o) => o.id !== id));
       setSnack({ open: true, msg: "Oferta eliminada", sev: "success" });
       if (highlightId.current === id) highlightId.current = null;
@@ -115,13 +116,13 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
       return;
     }
     try {
-      const r = await fetch(`${API_URL}/api/job/update-admin`, {
+      const res = await fetch(`${API_URL}/api/job/update-admin`, {
         method: "PUT",
         headers,
         body: JSON.stringify(sel),
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const upd = await r.json();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const upd = await res.json();
       setOffers((prev) => prev.map((o) => (o.id === upd.id ? upd : o)));
       setSnack({ open: true, msg: "Oferta actualizada", sev: "success" });
       setSel(null);
