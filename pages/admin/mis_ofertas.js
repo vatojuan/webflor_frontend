@@ -59,7 +59,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const fetchOffers = () => {
     if (!user || !token) return;
     setBusy(true);
-    fetch(`${API_URL}/api/job/admin_offers`, { headers })
+    fetch(`${API_URL}/api/job/admin_offers`)
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
