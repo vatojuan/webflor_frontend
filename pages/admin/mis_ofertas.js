@@ -1,15 +1,34 @@
 // pages/admin/mis_ofertas.js
+
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
-  Container, Typography, Box, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Snackbar, Alert, CircularProgress, Chip,
+  Container,
+  Typography,
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Snackbar,
+  Alert,
+  CircularProgress,
+  Chip,
 } from "@mui/material";
 import { useRouter } from "next/router";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fapmendoza.online";
+
 const fmtDate  = (d) => (d ? new Date(d).toLocaleDateString("es-AR") : "Sin fecha");
 const fmtLabel = (l) => (l === "manual" ? "Manual" : "Automático");
 
@@ -24,33 +43,30 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
   const highlightId = useRef(Number(query.jobId) || null);
   const tableContainerRef = useRef(null);
 
-  /* token admin */
-  const token = typeof window !== "undefined"
-    ? localStorage.getItem("adminToken")
-    : null;
-
-  /* headers para peticiones CON cuerpo  */
-  const jsonHeaders = useMemo(
-    () =>
-      token
-        ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
-        : { "Content-Type": "application/json" },
+  // ── token / headers ──
+  const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
+  const headers = useMemo(
+    () => ({
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }),
     [token]
   );
 
-  /* ─────────────  GET ofertas  (sin Content-Type) ───────────── */
+  // ── obtener ofertas ──
   const fetchOffers = () => {
     if (!user || !token) return;
     setBusy(true);
-
-    fetch(`${API_URL}/api/job/admin_offers`, {
-      headers: { Authorization: `Bearer ${token}` }, // solo auth
-    })
+    fetch(`${API_URL}/api/job/admin_offers`, { headers })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        if (!r.ok) {
+          throw new Error(`HTTP ${r.status}`);
+        }
         return r.json();
       })
-      .then((j) => setOffers(Array.isArray(j.offers) ? j.offers : []))
+      .then((json) => {
+        setOffers(Array.isArray(json.offers) ? json.offers : []);
+      })
       .catch((err) => {
         console.error("Error obteniendo ofertas:", err);
         setSnack({ open: true, msg: "Error obteniendo ofertas", sev: "error" });
@@ -60,7 +76,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
 
   useEffect(fetchOffers, [user, token]);
 
-  /* scroll a destacada */
+  // ── scroll y resaltar ──
   useEffect(() => {
     if (!busy && offers.length && highlightId.current && tableContainerRef.current) {
       const row = document.getElementById(`offer-row-${highlightId.current}`);
@@ -69,18 +85,18 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     }
   }, [busy, offers, replace]);
 
-  /* helpers UI */
-  const updateSel = (k, v) => setSel((o) => ({ ...o, [k]: v }));
+  // ── helpers ──
+  const updateSel = (k, v) => setSel((old) => ({ ...old, [k]: v }));
 
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta oferta?")) return;
     try {
-      const r = await fetch(`${API_URL}/api/job/delete-admin`, {
+      const res = await fetch(`${API_URL}/api/job/delete-admin`, {
         method: "DELETE",
-        headers: jsonHeaders,
+        headers,
         body: JSON.stringify({ jobId: id }),
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setOffers((prev) => prev.filter((o) => o.id !== id));
       setSnack({ open: true, msg: "Oferta eliminada", sev: "success" });
       if (highlightId.current === id) highlightId.current = null;
@@ -100,13 +116,13 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
       return;
     }
     try {
-      const r = await fetch(`${API_URL}/api/job/update-admin`, {
+      const res = await fetch(`${API_URL}/api/job/update-admin`, {
         method: "PUT",
-        headers: jsonHeaders,
+        headers,
         body: JSON.stringify(sel),
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const upd = await r.json();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const upd = await res.json();
       setOffers((prev) => prev.map((o) => (o.id === upd.id ? upd : o)));
       setSnack({ open: true, msg: "Oferta actualizada", sev: "success" });
       setSel(null);
@@ -116,7 +132,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     }
   };
 
-  /* loading */
+  // ── loading ──
   if (loading || busy)
     return (
       <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
@@ -127,7 +143,7 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
     );
   if (!user || !token) return null;
 
-  /* UI tabla */
+  // ── UI ──
   return (
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
       <Container sx={{ mt: 4 }}>
@@ -140,8 +156,15 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
             <TableHead>
               <TableRow>
                 {[
-                  "Título","Descripción","Requisitos","Expira",
-                  "Etiqueta","Fuente","E-mail contacto","Teléfono","Acciones",
+                  "Título",
+                  "Descripción",
+                  "Requisitos",
+                  "Expira",
+                  "Etiqueta",
+                  "Fuente",
+                  "E-mail contacto",
+                  "Teléfono",
+                  "Acciones",
                 ].map((h) => (
                   <TableCell key={h}>{h}</TableCell>
                 ))}
@@ -158,13 +181,13 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
                 offers.map((o) => {
                   const email = o.contactEmail ?? o.contact_email ?? "—";
                   const phone = o.contactPhone ?? o.contact_phone ?? "—";
-                  const highlight = o.id === highlightId.current;
+                  const isHighlight = o.id === highlightId.current;
                   return (
                     <TableRow
                       key={o.id}
                       id={`offer-row-${o.id}`}
                       sx={{
-                        backgroundColor: highlight
+                        backgroundColor: isHighlight
                           ? "#fff9c4"
                           : o.userId === user.id
                           ? "#FFFDE7"
@@ -214,38 +237,73 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
         </TableContainer>
       </Container>
 
-      {/* Diálogo edición */}
+      {/* Dialogo edición */}
       <Dialog open={Boolean(sel)} onClose={() => setSel(null)} fullWidth>
         <DialogTitle>Editar oferta</DialogTitle>
         <DialogContent dividers>
           {sel && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <TextField label="Título" fullWidth value={sel.title}
-                onChange={(e) => updateSel("title", e.target.value)} />
-              <TextField label="Descripción" fullWidth multiline rows={3}
+              <TextField
+                label="Título"
+                fullWidth
+                value={sel.title}
+                onChange={(e) => updateSel("title", e.target.value)}
+              />
+              <TextField
+                label="Descripción"
+                fullWidth
+                multiline
+                rows={3}
                 value={sel.description}
-                onChange={(e) => updateSel("description", e.target.value)} />
-              <TextField label="Requisitos" fullWidth multiline rows={2}
+                onChange={(e) => updateSel("description", e.target.value)}
+              />
+              <TextField
+                label="Requisitos"
+                fullWidth
+                multiline
+                rows={2}
                 value={sel.requirements}
-                onChange={(e) => updateSel("requirements", e.target.value)} />
-              <TextField label="Fecha de expiración" type="date" fullWidth
+                onChange={(e) => updateSel("requirements", e.target.value)}
+              />
+              <TextField
+                label="Fecha de expiración"
+                type="date"
+                fullWidth
                 InputLabelProps={{ shrink: true }}
                 value={sel.expirationDate?.slice(0, 10) || ""}
-                onChange={(e) => updateSel("expirationDate", e.target.value)} />
-              <TextField label="E-mail de contacto" type="email" fullWidth
+                onChange={(e) => updateSel("expirationDate", e.target.value)}
+              />
+              <TextField
+                label="E-mail de contacto"
+                type="email"
+                fullWidth
                 value={sel.contactEmail}
                 onChange={(e) => updateSel("contactEmail", e.target.value)}
-                required={sel.source === "admin"} />
-              <TextField label="Teléfono de contacto" fullWidth
+                required={sel.source === "admin"}
+              />
+              <TextField
+                label="Teléfono de contacto"
+                fullWidth
                 value={sel.contactPhone}
-                onChange={(e) => updateSel("contactPhone", e.target.value)} />
-              <TextField select label="Etiqueta" SelectProps={{ native: true }}
-                value={sel.label} onChange={(e) => updateSel("label", e.target.value)}>
+                onChange={(e) => updateSel("contactPhone", e.target.value)}
+              />
+              <TextField
+                select
+                label="Etiqueta"
+                SelectProps={{ native: true }}
+                value={sel.label}
+                onChange={(e) => updateSel("label", e.target.value)}
+              >
                 <option value="automatic">Automático</option>
                 <option value="manual">Manual</option>
               </TextField>
-              <TextField select label="Fuente" SelectProps={{ native: true }}
-                value={sel.source} onChange={(e) => updateSel("source", e.target.value)}>
+              <TextField
+                select
+                label="Fuente"
+                SelectProps={{ native: true }}
+                value={sel.source}
+                onChange={(e) => updateSel("source", e.target.value)}
+              >
                 <option value="admin">Administrador</option>
                 <option value="employer">Empleador</option>
                 <option value="instagram">Instagram</option>
@@ -255,7 +313,9 @@ export default function MisOfertas({ toggleDarkMode, currentMode }) {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSel(null)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave}>Guardar</Button>
+          <Button variant="contained" onClick={handleSave}>
+            Guardar
+          </Button>
         </DialogActions>
       </Dialog>
 
