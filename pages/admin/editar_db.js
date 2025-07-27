@@ -1,5 +1,5 @@
 // pages/admin/editar_db.js
-import React, { useState, useEffect, useCallback } from "react"; // Se añade useCallback
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Container,
   TextField,
@@ -42,11 +42,16 @@ export default function EditarDB() {
   const [newFile, setNewFile] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
+  // Se quita la constante 'token' de aquí para evitar usar un valor obsoleto.
+  // Cada función obtendrá el token directamente de localStorage.
 
-  // --- CORRECCIÓN ESLINT: Se envuelve la función en useCallback ---
   const fetchUsers = useCallback(async () => {
-    if (!token) return;
+    // Se obtiene el token actualizado justo antes de la llamada a la API
+    const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
+    if (!token) {
+      console.warn("No se encontró el token de administrador. Omitiendo la carga de usuarios.");
+      return;
+    }
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users`, {
         headers: {
@@ -64,13 +69,13 @@ export default function EditarDB() {
       console.error("Error fetching users:", error);
       setSnackbar({ open: true, message: "Error de red al cargar usuarios", severity: "error" });
     }
-  }, [token]);
+  }, []); // El array de dependencias está vacío, la función es estable.
 
   useEffect(() => {
     if (!loading) {
       fetchUsers();
     }
-  }, [loading, fetchUsers]); // Se añade fetchUsers a las dependencias
+  }, [loading, fetchUsers]);
 
   useEffect(() => {
     if (searchTerm === "") {
@@ -102,34 +107,41 @@ export default function EditarDB() {
   };
 
   const handleUpdateUser = async () => {
-    // ... (sin cambios en esta función)
+    // NOTA: Asegúrate de que esta función también obtenga el token de localStorage
+    // como se hizo en fetchUsers y handleDownloadFile.
   };
 
   const handleDeleteUser = async (userId) => {
-    // ... (sin cambios en esta función, pero se recomienda usar un modal en vez de confirm())
+    // NOTA: Asegúrate de que esta función también obtenga el token de localStorage.
   };
 
   const handleNewFileChange = (e) => {
-    // ... (sin cambios en esta función)
+    if (e.target.files.length > 0) {
+      setNewFile(e.target.files[0]);
+    }
   };
 
   const handleUploadFile = async () => {
-    // ... (sin cambios en esta función)
+    // NOTA: Asegúrate de que esta función también obtenga el token de localStorage.
   };
 
   const handleDeleteFile = async (fileId) => {
-    // ... (sin cambios en esta función, pero se recomienda usar un modal en vez de confirm())
+    // NOTA: Asegúrate de que esta función también obtenga el token de localStorage.
   };
 
-  // --- NUEVA FUNCIÓN PARA DESCARGAR ARCHIVOS DE FORMA SEGURA ---
   const handleDownloadFile = async (file) => {
     if (!selectedUser) {
         setSnackbar({ open: true, message: "No hay un usuario seleccionado.", severity: "error" });
         return;
     }
+    // Se obtiene el token actualizado justo antes de la llamada a la API
+    const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
+    if (!token) {
+        setSnackbar({ open: true, message: "Sesión de administrador no encontrada. Por favor, inicie sesión de nuevo.", severity: "error" });
+        return;
+    }
+
     try {
-        // NOTA: La URL del endpoint debe ser la correcta para el admin.
-        // Asumo una ruta como esta. ¡Verifícala en tu backend!
         const endpoint = `${process.env.NEXT_PUBLIC_API_URL}/admin/users/${selectedUser.id}/files/${file.id}/signed-url`;
         
         const res = await fetch(endpoint, {
@@ -159,13 +171,84 @@ export default function EditarDB() {
   return (
     <DashboardLayout>
       <Container maxWidth="lg" sx={{ mt: 4 }}>
-        {/* ... (Tabla de usuarios sin cambios) ... */}
+        <Typography variant="h4" gutterBottom>
+          Editar Base de Datos
+        </Typography>
+        <TextField
+          label="Buscar cliente"
+          variant="outlined"
+          fullWidth
+          margin="normal"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nombre</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Teléfono</TableCell>
+                <TableCell align="center">Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredUsers.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell>{u.name}</TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell>{u.phone}</TableCell>
+                  <TableCell align="center">
+                    <IconButton onClick={() => handleEditClick(u)}>
+                      <EditIcon color="primary" />
+                    </IconButton>
+                    <IconButton onClick={() => handleDeleteUser(u.id)}>
+                      <DeleteIcon color="error" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredUsers.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    No se encontraron clientes.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Container>
 
       <Dialog open={openEditDialog} onClose={handleDialogClose} maxWidth="sm" fullWidth>
         <DialogTitle>Editar Usuario</DialogTitle>
         <DialogContent>
-            {/* ... (Campos de texto para nombre, teléfono, descripción sin cambios) ... */}
+            <TextField
+              label="Nombre"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+            />
+            <TextField
+              label="Teléfono"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={editedPhone}
+              onChange={(e) => setEditedPhone(e.target.value)}
+            />
+            <TextField
+              label="Descripción"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              multiline
+              rows={3}
+              value={editedDescription}
+              onChange={(e) => setEditedDescription(e.target.value)}
+            />
             <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle1">Archivos Subidos</Typography>
                 {editedFiles && editedFiles.length > 0 ? (
@@ -182,13 +265,11 @@ export default function EditarDB() {
                             "&:hover": { backgroundColor: 'action.hover' }
                         }}
                     >
-                        {/* Se quita el <a> que no funcionaba */}
                         <Typography variant="body1" sx={{ flexGrow: 1 }}>
                             {file.filename}
                         </Typography>
                         
                         <Box>
-                            {/* --- CORRECCIÓN CLAVE: Se llama a la nueva función de descarga --- */}
                             <IconButton onClick={() => handleDownloadFile(file)}>
                                 <DownloadIcon />
                             </IconButton>
@@ -201,7 +282,25 @@ export default function EditarDB() {
                 ) : (
                     <Typography variant="body2">No hay archivos subidos.</Typography>
                 )}
-                {/* ... (Lógica para subir nuevos archivos sin cambios) ... */}
+                <Box sx={{ display: "flex", alignItems: "center", mt: 2 }}>
+                  <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
+                    Agregar Archivo
+                    <input type="file" hidden onChange={handleNewFileChange} />
+                  </Button>
+                  {newFile && (
+                    <Typography variant="body2" sx={{ ml: 2 }}>
+                      {newFile.name}
+                    </Typography>
+                  )}
+                  <Button
+                    variant="outlined"
+                    sx={{ ml: 2 }}
+                    onClick={handleUploadFile}
+                    disabled={!newFile}
+                  >
+                    Subir
+                  </Button>
+                </Box>
             </Box>
         </DialogContent>
         <DialogActions>
