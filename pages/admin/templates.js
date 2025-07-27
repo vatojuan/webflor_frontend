@@ -55,8 +55,29 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
 
   const formRef = useRef({ name: "", type: "empleado", subject: "", body: "", is_default: false });
 
-  const fetchTemplates = async () => { /* ... (sin cambios) ... */ };
-  useEffect(() => { if (!loading && user) fetchTemplates(); }, [loading, user]);
+  // --- CORRECCIÓN CLAVE ---
+  // Implementamos la función fetchTemplates para que llame al endpoint correcto.
+  const fetchTemplates = async () => {
+    try {
+      const res = await fetch(`${API}/api/admin/templates`, { // <-- URL CORRECTA
+        headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
+      });
+      if (!res.ok) {
+        throw new Error(`Error del servidor: ${res.status}`);
+      }
+      const data = await res.json();
+      setTemplates(data.templates || []);
+    } catch (error) {
+      console.error("Error cargando plantillas:", error);
+      setSnackbar({ open: true, message: "Error cargando las plantillas", severity: "error" });
+    }
+  };
+
+  useEffect(() => {
+    if (!loading && user) {
+      fetchTemplates();
+    }
+  }, [loading, user]);
 
   const handleOpenNew = () => {
     setEditing(null);
@@ -66,24 +87,84 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
 
   const handleOpenEdit = (tpl) => {
     setEditing(tpl);
+    // Usamos una copia para evitar mutaciones directas del estado
     formRef.current = { ...tpl };
     setOpenDialog(true);
   };
 
   const insertPlaceholder = (code) => {
     const ta = document.getElementById("template-body-field");
+    if (!ta) return;
     const pos = ta.selectionStart;
     const newBody = ta.value.slice(0, pos) + code + ta.value.slice(pos);
+    
+    // Actualizamos el ref y forzamos un re-render para que la UI lo refleje
     formRef.current.body = newBody;
-    // Forzar re-render para que el estado se actualice en la UI
-    setEditing(prev => ({...prev})); 
+    setEditing(prev => ({...prev}));
   };
 
-  const handleSave = async () => { /* ... (sin cambios, usa formRef.current) ... */ };
-  const handleDelete = async (tpl) => { /* ... (sin cambios) ... */ };
-  const handleSetDefault = async (tpl) => { /* ... (sin cambios) ... */ };
+  const handleSave = async () => {
+    const payload = {
+        name: formRef.current.name.trim(),
+        type: formRef.current.type,
+        subject: formRef.current.subject.trim(),
+        body: formRef.current.body,
+        is_default: formRef.current.is_default,
+    };
+    const url = editing ? `${API}/api/admin/templates/${editing.id}` : `${API}/api/admin/templates`;
+    const method = editing ? "PUT" : "POST";
 
-  if (loading || !user) return null;
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("adminToken")}`
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error("La petición al servidor falló.");
+        setSnackbar({ open: true, message: "Plantilla guardada con éxito", severity: "success" });
+        setOpenDialog(false);
+        fetchTemplates(); // Volver a cargar las plantillas
+    } catch (error) {
+        console.error("Error al guardar:", error);
+        setSnackbar({ open: true, message: "Error al guardar la plantilla", severity: "error" });
+    }
+  };
+  
+  const handleDelete = async (tpl) => {
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar la plantilla "${tpl.name}"?`)) return;
+    try {
+        const res = await fetch(`${API}/api/admin/templates/${tpl.id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
+        });
+        if (!res.ok) throw new Error("La petición al servidor falló.");
+        setSnackbar({ open: true, message: "Plantilla eliminada", severity: "success" });
+        fetchTemplates();
+    } catch (error) {
+        console.error("Error al eliminar:", error);
+        setSnackbar({ open: true, message: "Error al eliminar la plantilla", severity: "error" });
+    }
+  };
+
+  const handleSetDefault = async (tpl) => {
+    try {
+        const res = await fetch(`${API}/api/admin/templates/${tpl.id}/set-default`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
+        });
+        if (!res.ok) throw new Error("La petición al servidor falló.");
+        setSnackbar({ open: true, message: "Plantilla predeterminada actualizada", severity: "success" });
+        fetchTemplates();
+    } catch (error) {
+        console.error("Error al marcar como predeterminada:", error);
+        setSnackbar({ open: true, message: "Error al actualizar la plantilla predeterminada", severity: "error" });
+    }
+  };
+
+  if (loading || !user) return <p>Cargando...</p>;
 
   return (
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
@@ -159,10 +240,10 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
             <TextField
               id="template-body-field"
               label="Cuerpo del Email (HTML permitido)"
-              value={formRef.current.body} // Usar value para controlar el componente
+              value={formRef.current.body || ''}
               onChange={e => {
                   formRef.current.body = e.target.value;
-                  setEditing(prev => ({...prev})); // Forzar re-render
+                  setEditing(prev => ({...prev}));
               }}
               multiline rows={12} fullWidth
             />
@@ -173,7 +254,16 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
           <Button variant="contained" onClick={handleSave}>{editing ? "Guardar Cambios" : "Crear Plantilla"}</Button>
         </DialogActions>
       </Dialog>
-      {/* ... (Snackbar sin cambios) ... */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </DashboardLayout>
   );
 }
