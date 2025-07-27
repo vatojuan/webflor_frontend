@@ -267,3 +267,4 @@ export default function TemplatesPage({ toggleDarkMode, currentMode }) {
     </DashboardLayout>
   );
 }
+
