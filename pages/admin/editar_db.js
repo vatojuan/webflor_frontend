@@ -94,38 +94,114 @@ export default function EditarDB() {
     setNewFile(null);
   };
 
-  const handleDownloadFile = async (file) => {
+  const handleApiCall = async (endpoint, options = {}) => {
     const token = getToken();
-    if (!token || !selectedUser) return;
-    
-    // --- ¡CORRECCIÓN FINAL! ---
-    // Esta es la URL completa y correcta que coincide con el nuevo endpoint del backend.
-    const endpoint = `${process.env.NEXT_PUBLIC_API_URL}/admin/users/files/${file.id}/signed-url`;
-
+    if (!token) {
+      setSnackbar({ open: true, message: "Token de administrador no encontrado.", severity: "error" });
+      return null;
+    }
     try {
-      const res = await fetch(endpoint, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.url) {
-          window.open(data.url, "_blank");
-        } else {
-          throw new Error("La respuesta del servidor no contiene una URL.");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+        ...options,
+        headers: {
+          ...options.headers,
+          "Authorization": `Bearer ${token}`
         }
-      } else {
-        const errorData = await res.json();
-        setSnackbar({ open: true, message: errorData.detail || `Error ${res.status}`, severity: "error" });
-      }
+      });
+      return res;
     } catch (error) {
-      console.error("Error al descargar el archivo:", error);
-      setSnackbar({ open: true, message: "Error de red al descargar el archivo", severity: "error" });
+      setSnackbar({ open: true, message: "Error de red al contactar la API.", severity: "error" });
+      return null;
     }
   };
 
+  const handleUpdateUser = async () => {
+    if (!selectedUser) return;
+    const res = await handleApiCall(`/admin/users/${selectedUser.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editedName, phone: editedPhone, description: editedDescription })
+    });
+    if (res && res.ok) {
+      setSnackbar({ open: true, message: "Usuario actualizado", severity: "success" });
+      fetchUsers();
+      handleDialogClose();
+    } else if (res) {
+      const errorData = await res.json().catch(() => ({ detail: `Error al actualizar: ${res.statusText}` }));
+      setSnackbar({ open: true, message: errorData.detail, severity: "error" });
+    }
+  };
 
-  // ... (El resto de las funciones de manejo como handleUpdateUser, etc., sin cambios)
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("¿Estás seguro? Se eliminarán la cuenta, archivos y embeddings.")) return;
+    const res = await handleApiCall(`/admin/users/${userId}`, { method: "DELETE" });
+    if (res && res.ok) {
+      setSnackbar({ open: true, message: "Usuario eliminado", severity: "success" });
+      fetchUsers();
+    } else if (res) {
+      const errorData = await res.json().catch(() => ({ detail: `Error al eliminar: ${res.statusText}` }));
+      setSnackbar({ open: true, message: errorData.detail, severity: "error" });
+    }
+  };
+
+  const handleNewFileChange = (e) => {
+    if (e.target.files.length > 0) setNewFile(e.target.files[0]);
+  };
+
+  const handleUploadFile = async () => {
+    if (!newFile || !selectedUser) return;
+    const formData = new FormData();
+    formData.append("file", newFile);
+    const res = await handleApiCall(`/admin/users/${selectedUser.id}/files`, {
+      method: "POST",
+      body: formData
+    });
+    if (res && res.ok) {
+      const updatedUser = await res.json();
+      setEditedFiles(updatedUser.files);
+      setNewFile(null);
+      setSnackbar({ open: true, message: "Archivo subido", severity: "success" });
+    } else if (res) {
+      const errorData = await res.json().catch(() => ({ detail: `Error al subir archivo: ${res.statusText}` }));
+      setSnackbar({ open: true, message: errorData.detail, severity: "error" });
+    }
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    if (!selectedUser || !window.confirm("¿Seguro que quieres eliminar este archivo?")) return;
+    const res = await handleApiCall(`/admin/users/${selectedUser.id}/files/${fileId}`, { method: "DELETE" });
+    if (res && res.ok) {
+      const updatedUser = await res.json();
+      setEditedFiles(updatedUser.files);
+      setSnackbar({ open: true, message: "Archivo eliminado", severity: "success" });
+    } else if (res) {
+      const errorData = await res.json().catch(() => ({ detail: `Error al eliminar archivo: ${res.statusText}` }));
+      setSnackbar({ open: true, message: errorData.detail, severity: "error" });
+    }
+  };
+
+  const handleDownloadFile = async (file) => {
+    if (!selectedUser) return;
+    
+    // --- URL CORRECTA ---
+    // Esta URL ahora coincide con el endpoint que agregamos en el backend,
+    // incluyendo el prefijo del router "/admin/users".
+    const endpoint = `/admin/users/files/${file.id}/signed-url`;
+
+    const res = await handleApiCall(endpoint, { method: 'GET' });
+
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data.url) {
+        window.open(data.url, "_blank");
+      } else {
+        setSnackbar({ open: true, message: "La respuesta del servidor no contiene una URL.", severity: "error" });
+      }
+    } else if (res) {
+      const errorData = await res.json().catch(() => ({ detail: `Error ${res.status}: La ruta de descarga no existe en la API.` }));
+      setSnackbar({ open: true, message: errorData.detail, severity: "error" });
+    }
+  };
 
   if (loading) {
     return (
@@ -140,14 +216,46 @@ export default function EditarDB() {
   return (
     <DashboardLayout>
       <Container maxWidth="lg" sx={{ mt: 4 }}>
-        {/* ... (El resto del JSX de la tabla sin cambios) ... */}
+        <Typography variant="h4" gutterBottom>Editar Base de Datos</Typography>
+        <TextField label="Buscar cliente" variant="outlined" fullWidth margin="normal" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nombre</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Teléfono</TableCell>
+                <TableCell align="center">Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredUsers.length > 0 ? filteredUsers.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell>{u.name}</TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell>{u.phone}</TableCell>
+                  <TableCell align="center">
+                    <IconButton onClick={() => handleEditClick(u)}><EditIcon color="primary" /></IconButton>
+                    <IconButton onClick={() => handleDeleteUser(u.id)}><DeleteIcon color="error" /></IconButton>
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">No se encontraron clientes.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Container>
 
       {selectedUser && (
         <Dialog open={openEditDialog} onClose={handleDialogClose} maxWidth="sm" fullWidth>
           <DialogTitle>Editar Usuario: {selectedUser.name}</DialogTitle>
           <DialogContent>
-              {/* ... (Campos de texto) ... */}
+              <TextField label="Nombre" fullWidth margin="normal" value={editedName} onChange={(e) => setEditedName(e.target.value)} />
+              <TextField label="Teléfono" fullWidth margin="normal" value={editedPhone} onChange={(e) => setEditedPhone(e.target.value)} />
+              <TextField label="Descripción" fullWidth margin="normal" multiline rows={3} value={editedDescription} onChange={(e) => setEditedDescription(e.target.value)} />
               <Box sx={{ mt: 2 }}>
                   <Typography variant="subtitle1">Archivos Subidos</Typography>
                   {editedFiles && editedFiles.length > 0 ? (
@@ -155,19 +263,25 @@ export default function EditarDB() {
                       <Box key={file.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', my: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: 'action.hover' }}}>
                           <Typography variant="body1" sx={{ flexGrow: 1 }}>{file.filename}</Typography>
                           <Box>
-                              {/* El botón de descarga ahora llama a la función corregida */}
                               <IconButton onClick={() => handleDownloadFile(file)}><DownloadIcon /></IconButton>
-                              {/* <IconButton onClick={() => handleDeleteFile(file.id)}><DeleteIcon color="error" /></IconButton> */}
+                              <IconButton onClick={() => handleDeleteFile(file.id)}><DeleteIcon color="error" /></IconButton>
                           </Box>
                       </Box>
                       ))
                   ) : (<Typography variant="body2">No hay archivos subidos.</Typography>)}
-                  {/* ... (Lógica de subida de archivos) ... */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+                    <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
+                      Agregar Archivo
+                      <input type="file" hidden onChange={handleNewFileChange} />
+                    </Button>
+                    {newFile && (<Typography variant="body2" sx={{ ml: 2 }}>{newFile.name}</Typography>)}
+                    <Button variant="outlined" sx={{ ml: 2 }} onClick={handleUploadFile} disabled={!newFile}>Subir</Button>
+                  </Box>
               </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleDialogClose}>Cancelar</Button>
-            {/* <Button onClick={handleUpdateUser} variant="contained" color="primary">Guardar Cambios</Button> */}
+            <Button onClick={handleUpdateUser} variant="contained" color="primary">Guardar Cambios</Button>
           </DialogActions>
         </Dialog>
       )}
