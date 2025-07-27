@@ -20,7 +20,7 @@ import {
   Alert,
   Typography,
   Box,
-  CircularProgress // Importar para el indicador de carga
+  CircularProgress
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -45,10 +45,7 @@ export default function EditarDB() {
 
   const fetchUsers = useCallback(async () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
-    if (!token) {
-      console.warn("No se encontró el token de administrador. Omitiendo la carga de usuarios.");
-      return;
-    }
+    if (!token) return;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users`, {
         headers: { "Authorization": `Bearer ${token}` }
@@ -61,7 +58,6 @@ export default function EditarDB() {
         setSnackbar({ open: true, message: "Error al cargar usuarios", severity: "error" });
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
       setSnackbar({ open: true, message: "Error de red al cargar usuarios", severity: "error" });
     }
   }, []);
@@ -98,43 +94,51 @@ export default function EditarDB() {
 
   const getToken = () => typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
 
-  const handleUpdateUser = async () => {
+  const handleApiCall = async (endpoint, options) => {
     const token = getToken();
-    if (!token || !selectedUser) return;
+    if (!token) {
+      setSnackbar({ open: true, message: "Token de administrador no encontrado.", severity: "error" });
+      return null;
+    }
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${selectedUser.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ name: editedName, phone: editedPhone, description: editedDescription })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+        ...options,
+        headers: {
+          ...options.headers,
+          "Authorization": `Bearer ${token}`
+        }
       });
-      if (res.ok) {
-        setSnackbar({ open: true, message: "Usuario actualizado", severity: "success" });
-        fetchUsers();
-        handleDialogClose();
-      } else {
-        setSnackbar({ open: true, message: "Error al actualizar usuario", severity: "error" });
-      }
+      return res;
     } catch (error) {
-      setSnackbar({ open: true, message: "Error de red al actualizar", severity: "error" });
+      setSnackbar({ open: true, message: "Error de red al contactar la API.", severity: "error" });
+      return null;
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!selectedUser) return;
+    const res = await handleApiCall(`/admin/users/${selectedUser.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editedName, phone: editedPhone, description: editedDescription })
+    });
+    if (res && res.ok) {
+      setSnackbar({ open: true, message: "Usuario actualizado", severity: "success" });
+      fetchUsers();
+      handleDialogClose();
+    } else if (res) {
+      setSnackbar({ open: true, message: `Error al actualizar: ${res.statusText}`, severity: "error" });
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    const token = getToken();
-    if (!token || !window.confirm("¿Estás seguro? Se eliminarán la cuenta, archivos y embeddings.")) return;
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${userId}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setSnackbar({ open: true, message: "Usuario eliminado", severity: "success" });
-        fetchUsers();
-      } else {
-        setSnackbar({ open: true, message: "Error al eliminar usuario", severity: "error" });
-      }
-    } catch (error) {
-      setSnackbar({ open: true, message: "Error de red al eliminar", severity: "error" });
+    if (!window.confirm("¿Estás seguro? Se eliminarán la cuenta, archivos y embeddings.")) return;
+    const res = await handleApiCall(`/admin/users/${userId}`, { method: "DELETE" });
+    if (res && res.ok) {
+      setSnackbar({ open: true, message: "Usuario eliminado", severity: "success" });
+      fetchUsers();
+    } else if (res) {
+      setSnackbar({ open: true, message: `Error al eliminar: ${res.statusText}`, severity: "error" });
     }
   };
 
@@ -143,80 +147,67 @@ export default function EditarDB() {
   };
 
   const handleUploadFile = async () => {
-    const token = getToken();
     if (!newFile || !selectedUser) return;
     const formData = new FormData();
     formData.append("file", newFile);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${selectedUser.id}/files`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
-        body: formData
-      });
-      if (res.ok) {
-        const updatedUser = await res.json();
-        setEditedFiles(updatedUser.files);
-        setNewFile(null);
-        setSnackbar({ open: true, message: "Archivo subido", severity: "success" });
-      } else {
-        setSnackbar({ open: true, message: "Error al subir archivo", severity: "error" });
-      }
-    } catch (error) {
-      setSnackbar({ open: true, message: "Error de red al subir", severity: "error" });
+    const res = await handleApiCall(`/admin/users/${selectedUser.id}/files`, {
+      method: "POST",
+      body: formData
+    });
+    if (res && res.ok) {
+      const updatedUser = await res.json();
+      setEditedFiles(updatedUser.files);
+      setNewFile(null);
+      setSnackbar({ open: true, message: "Archivo subido", severity: "success" });
+    } else if (res) {
+      setSnackbar({ open: true, message: `Error al subir archivo: ${res.statusText}`, severity: "error" });
     }
   };
 
   const handleDeleteFile = async (fileId) => {
-    const token = getToken();
-    if (!token || !selectedUser || !window.confirm("¿Seguro que quieres eliminar este archivo?")) return;
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${selectedUser.id}/files/${fileId}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const updatedUser = await res.json();
-        setEditedFiles(updatedUser.files);
-        setSnackbar({ open: true, message: "Archivo eliminado", severity: "success" });
-      } else {
-        setSnackbar({ open: true, message: "Error al eliminar archivo", severity: "error" });
-      }
-    } catch (error) {
-      setSnackbar({ open: true, message: "Error de red al eliminar archivo", severity: "error" });
+    if (!selectedUser || !window.confirm("¿Seguro que quieres eliminar este archivo?")) return;
+    const res = await handleApiCall(`/admin/users/${selectedUser.id}/files/${fileId}`, { method: "DELETE" });
+    if (res && res.ok) {
+      const updatedUser = await res.json();
+      setEditedFiles(updatedUser.files);
+      setSnackbar({ open: true, message: "Archivo eliminado", severity: "success" });
+    } else if (res) {
+      setSnackbar({ open: true, message: `Error al eliminar archivo: ${res.statusText}`, severity: "error" });
     }
   };
 
   const handleDownloadFile = async (file) => {
-    const token = getToken();
-    if (!token || !selectedUser) return;
-    try {
-      // ATENCIÓN: Esta URL debe coincidir con tu endpoint en el backend.
-      // El error 404 indica que esta ruta no existe.
-      // Revisa tu API y ajústala si es necesario.
-      const endpoint = `${process.env.NEXT_PUBLIC_API_URL}/admin/files/${file.id}/signed-url`;
-      
-      const res = await fetch(endpoint, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+    if (!selectedUser) return;
+    
+    // =================================================================
+    // ¡ATENCIÓN! ESTA URL ES LA CAUSA DEL ERROR 404 (Not Found)
+    // =================================================================
+    // Tu backend no tiene una ruta que coincida con la URL que se está generando.
+    // Debes reemplazarla con la ruta CORRECTA que tu API usa para
+    // que un administrador genere una URL de descarga.
+    //
+    // Habla con tu desarrollador de backend o revisa el código de tu API
+    // (FastAPI, Express, etc.) para encontrar el endpoint correcto.
+    //
+    // Ejemplo de cómo podría ser la ruta correcta (¡esto es solo una suposición!):
+    // const endpoint = `/admin/download-file?fileId=${file.id}`;
+    //
+    const endpoint = `/admin/files/${file.id}/signed-url`; // <-- ¡CAMBIAR ESTA LÍNEA POR LA RUTA CORRECTA DE TU API!
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.url) {
-          window.open(data.url, "_blank");
-        } else {
-          throw new Error("La respuesta del servidor no contiene una URL.");
-        }
+    const res = await handleApiCall(endpoint, { method: 'GET' });
+
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data.url) {
+        window.open(data.url, "_blank");
       } else {
-        const errorData = await res.json();
-        setSnackbar({ open: true, message: errorData.message || "Error 404: Endpoint no encontrado", severity: "error" });
+        setSnackbar({ open: true, message: "La respuesta del servidor no contiene una URL.", severity: "error" });
       }
-    } catch (error) {
-      console.error("Error al descargar el archivo:", error);
-      setSnackbar({ open: true, message: "Error de red al descargar el archivo", severity: "error" });
+    } else if (res) {
+      setSnackbar({ open: true, message: `Error ${res.status}: La ruta de descarga no existe en la API.`, severity: "error" });
     }
   };
 
-  // SOLUCIÓN AL ERROR DE HIDRATACIÓN: Mostrar un cargador mientras se verifica el auth.
   if (loading) {
     return (
       <DashboardLayout>
@@ -231,14 +222,7 @@ export default function EditarDB() {
     <DashboardLayout>
       <Container maxWidth="lg" sx={{ mt: 4 }}>
         <Typography variant="h4" gutterBottom>Editar Base de Datos</Typography>
-        <TextField
-          label="Buscar cliente"
-          variant="outlined"
-          fullWidth
-          margin="normal"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <TextField label="Buscar cliente" variant="outlined" fullWidth margin="normal" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
