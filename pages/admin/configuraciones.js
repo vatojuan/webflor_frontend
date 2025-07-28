@@ -1,5 +1,3 @@
-// pages/admin/configuraciones.js
-
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -10,13 +8,16 @@ import {
   Paper,
   Box,
   Snackbar,
-  Alert
+  Alert,
+  CircularProgress,
+  Divider
 } from "@mui/material";
 import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL;
-const ENDPOINT = `${BASE}/api/admin/config`;
+const CONFIG_ENDPOINT = `${BASE}/api/admin/config`;
+const REGENERATE_ENDPOINT = `${BASE}/api/cv/regenerate-all-profiles`; // Endpoint para la regeneración
 
 export default function Configuraciones({ toggleDarkMode, currentMode }) {
   const { user, loading } = useAdminAuth();
@@ -24,6 +25,7 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
     show_expired_admin_offers: false,
     show_expired_employer_offers: false
   });
+  const [isRegenerating, setIsRegenerating] = useState(false); // Estado para el proceso de regeneración
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   // Helper para hacer fetch probando con/sin slash final
@@ -45,7 +47,7 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
     }
     const opts = { headers: { Authorization: `Bearer ${token}` } };
 
-    fetchWithFallback(ENDPOINT, opts)
+    fetchWithFallback(CONFIG_ENDPOINT, opts)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -82,7 +84,7 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
       body: JSON.stringify({ settings: config })
     };
 
-    fetchWithFallback(ENDPOINT, opts)
+    fetchWithFallback(CONFIG_ENDPOINT, opts)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         setSnackbar({ open: true, message: "Configuración guardada", severity: "success" });
@@ -93,13 +95,46 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
       });
   };
 
+  // --- Handler para iniciar la regeneración de perfiles ---
+  const handleRegenerateProfiles = async () => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      setSnackbar({ open: true, message: "No autorizado", severity: "error" });
+      return;
+    }
+
+    setIsRegenerating(true);
+    setSnackbar({ open: true, message: "Iniciando proceso...", severity: "info" });
+
+    try {
+      const res = await fetchWithFallback(REGENERATE_ENDPOINT, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        throw new Error(`Error del servidor: ${res.status}`);
+      }
+
+      const result = await res.json();
+      setSnackbar({ open: true, message: result.message || "Proceso iniciado correctamente.", severity: "success" });
+
+    } catch (error) {
+      console.error("Error al iniciar la regeneración:", error);
+      setSnackbar({ open: true, message: "Error al iniciar el proceso. Intente de nuevo.", severity: "error" });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+
   if (loading) return <Typography align="center" sx={{ mt: 4 }}>Cargando…</Typography>;
-  if (!user)   return null;
+  if (!user) return null;
 
   return (
     <DashboardLayout toggleDarkMode={toggleDarkMode} currentMode={currentMode}>
-      <Container sx={{ mt: 4 }}>
-        <Typography variant="h4" gutterBottom>Configuraciones</Typography>
+      <Container sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" gutterBottom>Configuraciones Generales</Typography>
         <Paper sx={{ p: 3, mt: 2 }}>
           <FormControlLabel
             control={
@@ -125,15 +160,38 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
             </Button>
           </Box>
         </Paper>
+
+        {/* --- NUEVA SECCIÓN DE MANTENIMIENTO --- */}
+        <Typography variant="h4" gutterBottom sx={{ mt: 5 }}>
+          Acciones de Mantenimiento
+        </Typography>
+        <Paper sx={{ p: 3, mt: 2 }}>
+          <Typography variant="h6">Regeneración de Perfiles</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
+            Este proceso actualizará todos los perfiles de usuario existentes utilizando la última
+            lógica de inteligencia artificial para la descripción y extracción de datos del CV.
+            La tarea se ejecuta en segundo plano.
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="secondary"
+            onClick={handleRegenerateProfiles}
+            disabled={isRegenerating}
+            startIcon={isRegenerating ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {isRegenerating ? "Procesando..." : "Regenerar Perfiles de Usuarios"}
+          </Button>
+        </Paper>
+
       </Container>
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={3000}
+        autoHideDuration={6000}
         onClose={() => setSnackbar(s => ({ ...s, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
       </Snackbar>
     </DashboardLayout>
   );
