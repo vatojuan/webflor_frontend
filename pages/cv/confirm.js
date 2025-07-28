@@ -5,7 +5,7 @@ import Head from "next/head";
 import { Container, Paper, Typography, CssBaseline, Box, Button, CircularProgress, Alert } from "@mui/material";
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import Link from 'next/link';
+// Se elimina la importación de 'Link' ya que no se usará para navegación externa.
 
 // Definimos los diferentes estados para manejar la UI
 const STATUS = {
@@ -66,11 +66,16 @@ export default function ConfirmEmailPage() {
                 <strong>Hemos enviado tus credenciales de acceso (usuario y contraseña temporal) a tu correo electrónico.</strong> Por favor, revisa tu bandeja de entrada (y la carpeta de spam).
               </Typography>
             </Alert>
-            <Link href="/login" passHref>
-              <Button variant="contained" size="large">
-                Ir a Iniciar Sesión
-              </Button>
-            </Link>
+            {/* --- CORRECCIÓN CLAVE --- */}
+            {/* Se reemplaza el <Link> por un <Button> que actúa como un enlace externo (<a>) */}
+            <Button 
+              variant="contained" 
+              size="large"
+              component="a" // Le decimos al botón que se comporte como un ancla (enlace)
+              href="https://www.fapmendoza.com/login" // URL absoluta al dominio de los usuarios
+            >
+              Ir a Iniciar Sesión
+            </Button>
           </>
         );
       case STATUS.ERROR:
