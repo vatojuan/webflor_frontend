@@ -16,8 +16,9 @@ import DashboardLayout from "../../components/DashboardLayout";
 import useAdminAuth from "../../hooks/useAdminAuth";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL;
-const CONFIG_ENDPOINT = `${BASE}/api/admin/config`;
-const REGENERATE_ENDPOINT = `${BASE}/api/cv/regenerate-all-profiles`; // Endpoint para la regeneración
+// --- CORRECCIÓN: Añadir la barra (/) al final de los endpoints ---
+const CONFIG_ENDPOINT = `${BASE}/api/admin/config/`; 
+const REGENERATE_ENDPOINT = `${BASE}/api/cv/regenerate-all-profiles/`;
 
 export default function Configuraciones({ toggleDarkMode, currentMode }) {
   const { user, loading } = useAdminAuth();
@@ -25,16 +26,27 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
     show_expired_admin_offers: false,
     show_expired_employer_offers: false
   });
-  const [isRegenerating, setIsRegenerating] = useState(false); // Estado para el proceso de regeneración
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
-  // Helper para hacer fetch probando con/sin slash final
+  // Este helper ya no es estrictamente necesario si siempre usamos la barra, pero lo dejamos como una buena práctica defensiva.
   async function fetchWithFallback(path, opts) {
-    let res = await fetch(path, opts);
-    if (res.status === 404 && !path.endsWith("/")) {
-      res = await fetch(path + "/", opts);
+    try {
+        let res = await fetch(path, opts);
+        // Si la respuesta es una redirección, el navegador la sigue automáticamente.
+        // Si falla por otra razón, el catch lo manejará.
+        if (!res.ok) {
+            // No intentar con barra extra si ya la tiene.
+            if (res.status === 404 && !path.endsWith('/')) {
+                console.log(`Intento fallido a ${path}, reintentando con /`);
+                res = await fetch(path + '/', opts);
+            }
+        }
+        return res;
+    } catch (error) {
+        console.error("Error en fetchWithFallback:", error);
+        throw error; // relanzar el error para que sea capturado por el .catch() de la llamada
     }
-    return res;
   }
 
   /* ──── Obtener configuración ──── */
@@ -95,7 +107,6 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
       });
   };
 
-  // --- Handler para iniciar la regeneración de perfiles ---
   const handleRegenerateProfiles = async () => {
     const token = localStorage.getItem("adminToken");
     if (!token) {
@@ -161,7 +172,6 @@ export default function Configuraciones({ toggleDarkMode, currentMode }) {
           </Box>
         </Paper>
 
-        {/* --- NUEVA SECCIÓN DE MANTENIMIENTO --- */}
         <Typography variant="h4" gutterBottom sx={{ mt: 5 }}>
           Acciones de Mantenimiento
         </Typography>
