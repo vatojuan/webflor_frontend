@@ -26,6 +26,7 @@ import Brightness7Icon from "@mui/icons-material/Brightness7";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import EmailIcon from "@mui/icons-material/Email";
+import SchoolIcon from '@mui/icons-material/School'; // <-- 1. IMPORTA EL NUEVO ÍCONO
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
@@ -114,6 +115,7 @@ export default function DashboardLayout({ children, toggleDarkMode, currentMode 
 
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, href: "/admin/dashboard" },
+    { text: "Formación", icon: <SchoolIcon />, href: "/admin/gestion-cursos" }, // <-- 2. AÑADE LA NUEVA LÍNEA AQUÍ
     { text: "Editar BD", icon: <EditIcon />, href: "/admin/editar_db" },
     { text: "Agregar CV", icon: <NoteAddIcon />, href: "/admin/agregar_cv" },
     { text: "Agregar oferta", icon: <LocalOfferIcon />, href: "/admin/agregar_oferta" },
