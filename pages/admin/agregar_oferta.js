@@ -41,7 +41,7 @@ export default function AgregarOferta({ toggleDarkMode, currentMode }) {
 
   useEffect(() => {
     if (!loading && !user) router.push("/admin/login");
-  }, [loading, user]);
+  }, [loading, user, router]);
 
   if (loading || !user) {
     return <Typography align="center" sx={{ mt: 4 }}>Cargando...</Typography>;
