@@ -4,11 +4,13 @@ import {
   Box, Container, Typography, TextField, Button, Snackbar, Alert, CircularProgress,
   Accordion, AccordionSummary, AccordionDetails, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, LinearProgress, Modal, Divider, IconButton,
-  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
+  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Tooltip
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import DownloadIcon from '@mui/icons-material/Download';
 import DashboardLayout from '../../components/DashboardLayout';
 import useAdminAuth from '../../hooks/useAdminAuth';
 
@@ -87,6 +89,57 @@ const AddLessonModal = ({ open, handleClose, courseId, onLessonAdded }) => {
     );
 };
 
+// --- Componente Modal para Editar Lección ---
+const EditLessonModal = ({ open, handleClose, lesson, onLessonEdited }) => {
+    const [editedLesson, setEditedLesson] = useState({ title: '', orderIndex: '' });
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (lesson) {
+            setEditedLesson({ title: lesson.title, orderIndex: lesson.orderIndex });
+        }
+    }, [lesson]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setEditedLesson(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        const token = localStorage.getItem('adminToken');
+        const formData = new FormData();
+        formData.append('title', editedLesson.title);
+        formData.append('order_index', editedLesson.orderIndex);
+
+        try {
+            await apiRequest(`/training/admin/lessons/${lesson.id}`, token, { method: 'PUT', body: formData });
+            onLessonEdited('Lección actualizada con éxito', 'success');
+            handleClose();
+        } catch (error) {
+            onLessonEdited(error.message, 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Modal open={open} onClose={handleClose}>
+            <Paper sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: { xs: '90%', sm: 400 }, p: 4 }}>
+                <Typography variant="h6" gutterBottom>Editar Lección</Typography>
+                <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TextField name="title" label="Título de la Lección" value={editedLesson.title} onChange={handleChange} required fullWidth />
+                    <TextField name="orderIndex" label="Número de Orden" type="number" value={editedLesson.orderIndex} onChange={handleChange} required fullWidth />
+                    <Button type="submit" variant="contained" disabled={submitting}>
+                        {submitting ? <CircularProgress size={24} /> : 'Guardar Cambios'}
+                    </Button>
+                </Box>
+            </Paper>
+        </Modal>
+    );
+};
+
 
 export default function GestionCursos({ toggleDarkMode, currentMode }) {
   const { user, loading: adminLoading } = useAdminAuth();
@@ -105,6 +158,11 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState(null);
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [lessonToEdit, setLessonToEdit] = useState(null);
+  const [deleteLessonDialogOpen, setDeleteLessonDialogOpen] = useState(false);
+  const [lessonToDelete, setLessonToDelete] = useState(null);
 
   const fetchCourses = useCallback(async () => {
     const token = localStorage.getItem('adminToken');
@@ -199,6 +257,40 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
     }
   };
 
+  const handleEditLessonClick = (lesson) => {
+    setLessonToEdit(lesson);
+    setEditModalOpen(true);
+  };
+
+  const handleDeleteLessonClick = (lesson) => {
+    setLessonToDelete(lesson);
+    setDeleteLessonDialogOpen(true);
+  };
+
+  const handleDeleteLessonConfirm = async () => {
+    if (!lessonToDelete) return;
+    const token = localStorage.getItem('adminToken');
+    try {
+        await apiRequest(`/training/admin/lessons/${lessonToDelete.id}`, token, { method: 'DELETE' });
+        handleLessonAdded(`Lección "${lessonToDelete.title}" eliminada`, 'success'); // Reutilizamos la lógica de refresco
+    } catch (error) {
+        setSnackbar({ open: true, message: error.message, severity: 'error' });
+    } finally {
+        setDeleteLessonDialogOpen(false);
+        setLessonToDelete(null);
+    }
+  };
+
+  const handleDownloadVideo = async (lessonId) => {
+    const token = localStorage.getItem('adminToken');
+    try {
+        const data = await apiRequest(`/training/admin/lessons/${lessonId}/signed-url`, token);
+        window.open(data.url, '_blank'); // Abre la URL firmada en una nueva pestaña para descargar
+    } catch (error) {
+        setSnackbar({ open: true, message: `Error al obtener enlace de descarga: ${error.message}`, severity: 'error' });
+    }
+  };
+
   if (adminLoading || loading) {
     return <DashboardLayout><Container sx={{ textAlign: 'center', mt: 5 }}><CircularProgress /></Container></DashboardLayout>;
   }
@@ -247,10 +339,36 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
 
               <Typography variant="subtitle2" sx={{ mt: 2 }}>Lecciones</Typography>
               {courseDetails[course.id]?.lessons?.length > 0 ? (
-                 <TableContainer component={Paper} sx={{ mt: 1 }}><Table size="small">
-                    <TableHead><TableRow><TableCell>Orden</TableCell><TableCell>Título</TableCell></TableRow></TableHead>
-                    <TableBody>{courseDetails[course.id].lessons.map(l => (<TableRow key={l.id}><TableCell>{l.orderIndex}</TableCell><TableCell>{l.title}</TableCell></TableRow>))}</TableBody>
-                 </Table></TableContainer>
+                 <TableContainer component={Paper} sx={{ mt: 1 }}>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Orden</TableCell>
+                                <TableCell>Título</TableCell>
+                                <TableCell align="right">Acciones</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {courseDetails[course.id].lessons.map(lesson => (
+                                <TableRow key={lesson.id}>
+                                    <TableCell>{lesson.orderIndex}</TableCell>
+                                    <TableCell>{lesson.title}</TableCell>
+                                    <TableCell align="right">
+                                        <Tooltip title="Editar Lección">
+                                            <IconButton size="small" onClick={() => handleEditLessonClick(lesson)}><EditIcon fontSize="small" /></IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Descargar Video">
+                                            <IconButton size="small" onClick={() => handleDownloadVideo(lesson.id)}><DownloadIcon fontSize="small" /></IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Eliminar Lección">
+                                            <IconButton size="small" onClick={() => handleDeleteLessonClick(lesson)} sx={{ color: 'error.main' }}><DeleteIcon fontSize="small" /></IconButton>
+                                        </Tooltip>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                 </TableContainer>
               ) : <Typography variant="caption" sx={{ fontStyle: 'italic' }}>No hay lecciones en este curso.</Typography>}
 
               <Typography variant="subtitle2" sx={{ mt: 3 }}>Estudiantes Inscritos</Typography>
@@ -267,11 +385,19 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
         ))}
 
         <AddLessonModal open={modalOpen} handleClose={() => setModalOpen(false)} courseId={selectedCourse} onLessonAdded={handleLessonAdded} />
+        
+        <EditLessonModal open={editModalOpen} handleClose={() => setEditModalOpen(false)} lesson={lessonToEdit} onLessonEdited={handleLessonAdded} />
 
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
             <DialogTitle>Confirmar Eliminación</DialogTitle>
             <DialogContent><DialogContentText>¿Estás seguro de que quieres eliminar el curso &quot;<strong>{courseToDelete?.title}</strong>&quot;? Esta acción es irreversible y borrará todas sus lecciones e inscripciones.</DialogContentText></DialogContent>
             <DialogActions><Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button><Button onClick={handleDeleteConfirm} color="error">Eliminar</Button></DialogActions>
+        </Dialog>
+        
+        <Dialog open={deleteLessonDialogOpen} onClose={() => setDeleteLessonDialogOpen(false)}>
+            <DialogTitle>Confirmar Eliminación de Lección</DialogTitle>
+            <DialogContent><DialogContentText>¿Estás seguro de que quieres eliminar la lección &quot;<strong>{lessonToDelete?.title}</strong>&quot;? Esta acción es irreversible.</DialogContentText></DialogContent>
+            <DialogActions><Button onClick={() => setDeleteLessonDialogOpen(false)}>Cancelar</Button><Button onClick={handleDeleteLessonConfirm} color="error">Eliminar</Button></DialogActions>
         </Dialog>
 
         <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({...s, open: false}))}>
