@@ -29,7 +29,6 @@ const apiRequest = async (endpoint, token, options = {}) => {
     throw new Error(error.detail || 'Ocurrió un error');
   }
   
-  // No intentar parsear JSON si la respuesta no tiene contenido
   if (res.status === 204) {
     return null;
   }
@@ -60,7 +59,7 @@ const AddLessonModal = ({ open, handleClose, courseId, onLessonAdded }) => {
             await apiRequest(`/training/courses/${courseId}/lessons`, token, { method: 'POST', body: formData });
             onLessonAdded('Lección añadida con éxito', 'success');
             handleClose();
-            setLesson({ title: '', orderIndex: '', video: null }); // Limpiar al cerrar
+            setLesson({ title: '', orderIndex: '', video: null });
         } catch (error) {
             onLessonAdded(error.message, 'error');
         } finally {
@@ -231,9 +230,11 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
 
   const handleLessonAdded = (message, severity) => {
     setSnackbar({ open: true, message, severity });
-    const courseIdToRefresh = selectedCourse;
-    setCourseDetails(prev => ({ ...prev, [courseIdToRefresh]: undefined }));
-    handleAccordionChange(courseIdToRefresh);
+    const courseIdToRefresh = selectedCourse || lessonToEdit?.courseId || lessonToDelete?.courseId;
+    if (courseIdToRefresh) {
+        setCourseDetails(prev => ({ ...prev, [courseIdToRefresh]: undefined }));
+        handleAccordionChange(courseIdToRefresh);
+    }
   };
 
   const handleDeleteClick = (course, event) => {
@@ -257,13 +258,13 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
     }
   };
 
-  const handleEditLessonClick = (lesson) => {
-    setLessonToEdit(lesson);
+  const handleEditLessonClick = (lesson, courseId) => {
+    setLessonToEdit({ ...lesson, courseId });
     setEditModalOpen(true);
   };
 
-  const handleDeleteLessonClick = (lesson) => {
-    setLessonToDelete(lesson);
+  const handleDeleteLessonClick = (lesson, courseId) => {
+    setLessonToDelete({ ...lesson, courseId });
     setDeleteLessonDialogOpen(true);
   };
 
@@ -272,7 +273,7 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
     const token = localStorage.getItem('adminToken');
     try {
         await apiRequest(`/training/admin/lessons/${lessonToDelete.id}`, token, { method: 'DELETE' });
-        handleLessonAdded(`Lección "${lessonToDelete.title}" eliminada`, 'success'); // Reutilizamos la lógica de refresco
+        handleLessonAdded(`Lección "${lessonToDelete.title}" eliminada`, 'success');
     } catch (error) {
         setSnackbar({ open: true, message: error.message, severity: 'error' });
     } finally {
@@ -285,7 +286,7 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
     const token = localStorage.getItem('adminToken');
     try {
         const data = await apiRequest(`/training/admin/lessons/${lessonId}/signed-url`, token);
-        window.open(data.url, '_blank'); // Abre la URL firmada en una nueva pestaña para descargar
+        window.open(data.url, '_blank');
     } catch (error) {
         setSnackbar({ open: true, message: `Error al obtener enlace de descarga: ${error.message}`, severity: 'error' });
     }
@@ -341,28 +342,16 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
               {courseDetails[course.id]?.lessons?.length > 0 ? (
                  <TableContainer component={Paper} sx={{ mt: 1 }}>
                     <Table size="small">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Orden</TableCell>
-                                <TableCell>Título</TableCell>
-                                <TableCell align="right">Acciones</TableCell>
-                            </TableRow>
-                        </TableHead>
+                        <TableHead><TableRow><TableCell>Orden</TableCell><TableCell>Título</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
                         <TableBody>
                             {courseDetails[course.id].lessons.map(lesson => (
                                 <TableRow key={lesson.id}>
                                     <TableCell>{lesson.orderIndex}</TableCell>
                                     <TableCell>{lesson.title}</TableCell>
                                     <TableCell align="right">
-                                        <Tooltip title="Editar Lección">
-                                            <IconButton size="small" onClick={() => handleEditLessonClick(lesson)}><EditIcon fontSize="small" /></IconButton>
-                                        </Tooltip>
-                                        <Tooltip title="Descargar Video">
-                                            <IconButton size="small" onClick={() => handleDownloadVideo(lesson.id)}><DownloadIcon fontSize="small" /></IconButton>
-                                        </Tooltip>
-                                        <Tooltip title="Eliminar Lección">
-                                            <IconButton size="small" onClick={() => handleDeleteLessonClick(lesson)} sx={{ color: 'error.main' }}><DeleteIcon fontSize="small" /></IconButton>
-                                        </Tooltip>
+                                        <Tooltip title="Editar Lección"><IconButton size="small" onClick={() => handleEditLessonClick(lesson, course.id)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                                        <Tooltip title="Descargar Video"><IconButton size="small" onClick={() => handleDownloadVideo(lesson.id)}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
+                                        <Tooltip title="Eliminar Lección"><IconButton size="small" onClick={() => handleDeleteLessonClick(lesson, course.id)} sx={{ color: 'error.main' }}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -385,7 +374,6 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
         ))}
 
         <AddLessonModal open={modalOpen} handleClose={() => setModalOpen(false)} courseId={selectedCourse} onLessonAdded={handleLessonAdded} />
-        
         <EditLessonModal open={editModalOpen} handleClose={() => setEditModalOpen(false)} lesson={lessonToEdit} onLessonEdited={handleLessonAdded} />
 
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
@@ -393,7 +381,6 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
             <DialogContent><DialogContentText>¿Estás seguro de que quieres eliminar el curso &quot;<strong>{courseToDelete?.title}</strong>&quot;? Esta acción es irreversible y borrará todas sus lecciones e inscripciones.</DialogContentText></DialogContent>
             <DialogActions><Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button><Button onClick={handleDeleteConfirm} color="error">Eliminar</Button></DialogActions>
         </Dialog>
-        
         <Dialog open={deleteLessonDialogOpen} onClose={() => setDeleteLessonDialogOpen(false)}>
             <DialogTitle>Confirmar Eliminación de Lección</DialogTitle>
             <DialogContent><DialogContentText>¿Estás seguro de que quieres eliminar la lección &quot;<strong>{lessonToDelete?.title}</strong>&quot;? Esta acción es irreversible.</DialogContentText></DialogContent>
@@ -401,7 +388,7 @@ export default function GestionCursos({ toggleDarkMode, currentMode }) {
         </Dialog>
 
         <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({...s, open: false}))}>
-          <Alert onClose={() => setSnackbar(s => ({...s, open: false}))} severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
+          <Alert onClose={() => setSnackbar(s => ({...s, open: false}))} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">{snackbar.message}</Alert>
         </Snackbar>
       </Container>
     </DashboardLayout>
